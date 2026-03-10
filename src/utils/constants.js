@@ -22,8 +22,8 @@ export const LIE_OPTIONS = ["Tee", "Fairway", "Rough", "Sand", "Green"]
 
 export const SHOT_RESULT_OPTIONS = [
   "Pured",
-  "Draw",
-  "Fade",
+  "Pull",
+  "Push",
   "Hook",
   "Slice",
   "Duff",
