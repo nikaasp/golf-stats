@@ -20,29 +20,22 @@ const CLUB_OPTIONS = [
   "GW",
   "SW",
   "LW",
-  "Putter",
 ]
 
 const LIE_OPTIONS = ["Tee", "Fairway", "Rough", "Sand", "Green"]
-
-const SHOT_RESULT_OPTIONS = [
-  "Pured",
-  "Draw",
-  "Fade",
-  "Hook",
-  "Slice",
-  "Duff",
-  "Top",
-]
-
+const SHOT_RESULT_OPTIONS = ["Pured", "Draw", "Fade", "Hook", "Slice", "Duff", "Top"]
 const PENALTY_TYPE_OPTIONS = ["None", "Hazard", "OB"]
+
+const DISTANCE_OPTIONS = Array.from({ length: 1301 }, (_, i) => (i * 0.5).toFixed(1))
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value))
 }
 
-function formatDistance(value) {
-  return `${Number(value).toFixed(1)} m`
+function getPenaltyFromType(type) {
+  if (type === "Hazard") return 1
+  if (type === "OB") return 2
+  return 0
 }
 
 function getDefaultLieForShot(shotNumber) {
@@ -52,6 +45,7 @@ function getDefaultLieForShot(shotNumber) {
 function makeShot(shotNumber) {
   return {
     shot_number: shotNumber,
+    is_putt: false,
     lie: getDefaultLieForShot(shotNumber),
     distance_to_flag: 100,
     club: "",
@@ -60,54 +54,327 @@ function makeShot(shotNumber) {
   }
 }
 
-function getPenaltyFromType(type) {
-  if (type === "Hazard") return 1
-  if (type === "OB") return 2
-  return 0
+function formatDistance(value) {
+  return `${Number(value).toFixed(1)} m`
 }
 
-function DistanceDial({ value, onChange }) {
-  const safeValue = typeof value === "number" ? value : 100
+function groupShotsByHole(shots) {
+  const grouped = {}
+  for (const shot of shots) {
+    const key = shot.hole_number
+    if (!grouped[key]) grouped[key] = []
+    grouped[key].push(shot)
+  }
+  for (const key of Object.keys(grouped)) {
+    grouped[key].sort((a, b) => a.shot_number - b.shot_number)
+  }
+  return grouped
+}
 
-  function step(delta) {
-    const next = clamp(Math.round((safeValue + delta) * 2) / 2, 0, 650)
-    onChange(next)
+function inferHoleMetrics(hole, holeShots) {
+  const par = hole.par ?? null
+
+  if (hole.entry_mode === "score") {
+    return {
+      fairway: par === 3 ? null : hole.fairway,
+      gir: hole.gir,
+      putts: hole.putts,
+      drivingDistance: null,
+      approachAccuracy: null,
+    }
   }
 
-  return (
-    <div style={styles.dialWrap}>
-      <div style={styles.dialValue}>{formatDistance(safeValue)}</div>
+  if (hole.entry_mode !== "shot_by_shot") {
+    return {
+      fairway: null,
+      gir: null,
+      putts: null,
+      drivingDistance: null,
+      approachAccuracy: null,
+    }
+  }
 
-      <div style={styles.dialRow}>
-        <button type="button" style={styles.dialButton} onClick={() => step(-25)}>
-          -25
-        </button>
-        <button type="button" style={styles.dialButton} onClick={() => step(-5)}>
-          -5
-        </button>
-        <button type="button" style={styles.dialButton} onClick={() => step(-0.5)}>
-          -0.5
-        </button>
-        <button type="button" style={styles.dialButton} onClick={() => step(0.5)}>
-          +0.5
-        </button>
-        <button type="button" style={styles.dialButton} onClick={() => step(5)}>
-          +5
-        </button>
-        <button type="button" style={styles.dialButton} onClick={() => step(25)}>
-          +25
-        </button>
+  const shots = [...holeShots].sort((a, b) => a.shot_number - b.shot_number)
+  const firstPutt = shots.find((s) => s.is_putt)
+  const firstPuttIndex = shots.findIndex((s) => s.is_putt)
+
+  let fairway = null
+  if (par && par > 3 && shots.length >= 2) {
+    const secondShot = shots[1]
+    fairway = !secondShot.is_putt && secondShot.lie === "Fairway"
+  }
+
+  let gir = null
+  if (par && firstPutt) {
+    gir = firstPutt.shot_number <= par - 1
+  } else if (par) {
+    gir = false
+  }
+
+  const putts = shots.filter((s) => s.is_putt).length
+
+  let drivingDistance = null
+  if (
+    par &&
+    par > 3 &&
+    shots.length >= 2 &&
+    shots[0].distance_to_flag != null &&
+    shots[1].distance_to_flag != null
+  ) {
+    drivingDistance = clamp(
+      Number(shots[0].distance_to_flag) - Number(shots[1].distance_to_flag),
+      0,
+      650
+    )
+  }
+
+  let approachAccuracy = null
+  if (firstPuttIndex > 0) {
+    const approachShot = shots[firstPuttIndex - 1]
+    const firstPuttShot = shots[firstPuttIndex]
+    if (
+      approachShot?.distance_to_flag != null &&
+      firstPuttShot?.distance_to_flag != null
+    ) {
+      approachAccuracy = clamp(
+        Number(approachShot.distance_to_flag) - Number(firstPuttShot.distance_to_flag),
+        0,
+        650
+      )
+    }
+  }
+
+  return {
+    fairway,
+    gir,
+    putts,
+    drivingDistance,
+    approachAccuracy,
+  }
+}
+
+function buildRoundAnalytics(holes, shots) {
+  const playedHoles = holes.filter((h) => !h.skipped)
+  const shotsByHole = groupShotsByHole(shots)
+
+  let totalScore = 0
+  let totalPar = 0
+  let totalPutts = 0
+
+  let girHits = 0
+  let girOpp = 0
+  let fwHits = 0
+  let fwOpp = 0
+
+  let driveValues = []
+  let approachValues = []
+
+  let par3Scores = []
+  let par4Scores = []
+  let par5Scores = []
+
+  const contactCounts = {
+    Pured: 0,
+    Draw: 0,
+    Fade: 0,
+    Hook: 0,
+    Slice: 0,
+    Duff: 0,
+    Top: 0,
+  }
+
+  const perHole = playedHoles.map((hole) => {
+    const holeShots = shotsByHole[hole.hole_number] || []
+    const inferred = inferHoleMetrics(hole, holeShots)
+
+    totalScore += hole.score || 0
+    totalPar += hole.par || 0
+    totalPutts += inferred.putts || 0
+
+    if (hole.par === 3) par3Scores.push(hole.score || 0)
+    if (hole.par === 4) par4Scores.push(hole.score || 0)
+    if (hole.par === 5) par5Scores.push(hole.score || 0)
+
+    if (inferred.fairway !== null) {
+      fwOpp += 1
+      if (inferred.fairway) fwHits += 1
+    }
+
+    if (inferred.gir !== null) {
+      girOpp += 1
+      if (inferred.gir) girHits += 1
+    }
+
+    if (inferred.drivingDistance !== null) {
+      driveValues.push(inferred.drivingDistance)
+    }
+
+    if (inferred.approachAccuracy !== null) {
+      approachValues.push(inferred.approachAccuracy)
+    }
+
+    for (const shot of holeShots) {
+      if (!shot.is_putt && shot.shot_result && contactCounts[shot.shot_result] !== undefined) {
+        contactCounts[shot.shot_result] += 1
+      }
+    }
+
+    return {
+      ...hole,
+      inferred,
+    }
+  })
+
+  const frontNine = perHole.filter((h) => h.hole_number <= 9)
+  const backNine = perHole.filter((h) => h.hole_number >= 10)
+
+  const frontScore = frontNine.reduce((s, h) => s + (h.score || 0), 0)
+  const frontPar = frontNine.reduce((s, h) => s + (h.par || 0), 0)
+  const backScore = backNine.reduce((s, h) => s + (h.score || 0), 0)
+  const backPar = backNine.reduce((s, h) => s + (h.par || 0), 0)
+
+  const avg = (arr) =>
+    arr.length > 0 ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : "-"
+
+  const girPct = girOpp > 0 ? ((girHits / girOpp) * 100).toFixed(1) : "0.0"
+  const fwPct = fwOpp > 0 ? ((fwHits / fwOpp) * 100).toFixed(1) : "0.0"
+
+  const contactTotal = Object.values(contactCounts).reduce((a, b) => a + b, 0)
+
+  return {
+    playedCount: perHole.length,
+    totalScore,
+    totalPar,
+    relativeToPar: totalScore - totalPar,
+    totalPutts,
+
+    fwHits,
+    fwMisses: Math.max(0, fwOpp - fwHits),
+    fwOpp,
+    fwPct,
+
+    girHits,
+    girMisses: Math.max(0, girOpp - girHits),
+    girOpp,
+    girPct,
+
+    contactCounts,
+    contactTotal,
+
+    avgDrive: avg(driveValues),
+    avgApproach: avg(approachValues),
+
+    avgPar3: avg(par3Scores),
+    avgPar4: avg(par4Scores),
+    avgPar5: avg(par5Scores),
+
+    frontScore,
+    frontPar,
+    backScore,
+    backPar,
+
+    holes: perHole,
+  }
+}
+
+function formatToPar(score, par) {
+  if (score == null || par == null) return "-"
+  const diff = score - par
+  if (diff > 0) return `+${diff}`
+  return `${diff}`
+}
+
+function scoreStyle(score, par) {
+  if (score == null || par == null) return styles.scorePar
+  const diff = score - par
+  if (diff <= -2) return styles.scoreEagle
+  if (diff === -1) return styles.scoreBirdie
+  if (diff === 0) return styles.scorePar
+  if (diff === 1) return styles.scoreBogey
+  return styles.scoreDouble
+}
+
+function scoreLabel(score, par) {
+  if (score == null || par == null) return "-"
+  const diff = score - par
+  if (diff <= -2) return "Eagle+"
+  if (diff === -1) return "Birdie"
+  if (diff === 0) return "Par"
+  if (diff === 1) return "Bogey"
+  return "Double+"
+}
+
+function PieChart({ title, data }) {
+  const total = data.reduce((s, d) => s + d.value, 0)
+
+  if (total === 0) {
+    return (
+      <div style={styles.chartCard}>
+        <div style={styles.chartTitle}>{title}</div>
+        <div style={styles.noData}>No data</div>
       </div>
+    )
+  }
 
-      <input
-        style={styles.rangeInput}
-        type="range"
-        min="0"
-        max="650"
-        step="0.5"
-        value={safeValue}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
+  let current = 0
+  const gradientStops = data
+    .map((d) => {
+      const start = current
+      const end = current + (d.value / total) * 100
+      current = end
+      return `${d.color} ${start}% ${end}%`
+    })
+    .join(", ")
+
+  return (
+    <div style={styles.chartCard}>
+      <div style={styles.chartTitle}>{title}</div>
+      <div style={styles.chartWrap}>
+        <div
+          style={{
+            ...styles.pie,
+            background: `conic-gradient(${gradientStops})`,
+          }}
+        />
+        <div style={styles.legend}>
+          {data.map((d) => {
+            const pct = ((d.value / total) * 100).toFixed(1)
+            return (
+              <div key={d.label} style={styles.legendRow}>
+                <span style={{ ...styles.legendSwatch, background: d.color }} />
+                <span style={styles.legendText}>
+                  {d.label}: {pct}% ({d.value})
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DistancePicker({ value, onChange }) {
+  return (
+    <select
+      style={styles.input}
+      value={Number(value).toFixed(1)}
+      onChange={(e) => onChange(Number(e.target.value))}
+    >
+      {DISTANCE_OPTIONS.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt} m
+        </option>
+      ))}
+    </select>
+  )
+}
+
+function StatCard({ label, value }) {
+  return (
+    <div style={styles.statCard}>
+      <div style={styles.statValue}>{value}</div>
+      <div style={styles.statLabel}>{label}</div>
     </div>
   )
 }
@@ -122,9 +389,12 @@ function App() {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
 
   const [holesData, setHolesData] = useState([])
+  const [roundShots, setRoundShots] = useState([])
+
   const [reviewRounds, setReviewRounds] = useState([])
   const [selectedReviewRound, setSelectedReviewRound] = useState(null)
   const [selectedReviewHoles, setSelectedReviewHoles] = useState([])
+  const [selectedReviewShots, setSelectedReviewShots] = useState([])
 
   const [par, setPar] = useState("")
   const [entryMode, setEntryMode] = useState("")
@@ -139,9 +409,7 @@ function App() {
   const [activeShotIndex, setActiveShotIndex] = useState(0)
 
   useEffect(() => {
-    if (screen === "home") {
-      loadRounds()
-    }
+    if (screen === "home") loadRounds()
   }, [screen])
 
   async function loadRounds() {
@@ -158,24 +426,45 @@ function App() {
     setReviewRounds(data || [])
   }
 
-  async function loadRoundDetailsForReview(round) {
-    setLoading(true)
+  async function fetchRoundBundle(targetRoundId) {
+    const [holesRes, shotsRes] = await Promise.all([
+      supabase
+        .from("holes")
+        .select("*")
+        .eq("round_id", targetRoundId)
+        .order("hole_number", { ascending: true }),
+      supabase
+        .from("shots")
+        .select("*")
+        .eq("round_id", targetRoundId)
+        .order("hole_number", { ascending: true })
+        .order("shot_number", { ascending: true }),
+    ])
 
-    const { data, error } = await supabase
-      .from("holes")
-      .select("*")
-      .eq("round_id", round.id)
-      .order("hole_number", { ascending: true })
-
-    setLoading(false)
-
-    if (error) {
-      alert("Could not load round details: " + error.message)
-      return
+    if (holesRes.error) {
+      alert("Could not load holes: " + holesRes.error.message)
+      return null
+    }
+    if (shotsRes.error) {
+      alert("Could not load shots: " + shotsRes.error.message)
+      return null
     }
 
+    return {
+      holes: holesRes.data || [],
+      shots: shotsRes.data || [],
+    }
+  }
+
+  async function loadRoundDetailsForReview(round) {
+    setLoading(true)
+    const bundle = await fetchRoundBundle(round.id)
+    setLoading(false)
+    if (!bundle) return
+
     setSelectedReviewRound(round)
-    setSelectedReviewHoles(data || [])
+    setSelectedReviewHoles(bundle.holes)
+    setSelectedReviewShots(bundle.shots)
     setScreen("review")
   }
 
@@ -206,6 +495,7 @@ function App() {
     setHole(1)
     resetHoleInputs()
     setHolesData([])
+    setRoundShots([])
     setScreen("play")
   }
 
@@ -240,20 +530,40 @@ function App() {
   function removeShotCard(index) {
     setShots((prev) => {
       if (prev.length === 1) return prev
-      const updated = prev.filter((_, i) => i !== index).map((shot, i) => ({
-        ...shot,
-        shot_number: i + 1,
-        lie: i === 0 ? "Tee" : shot.lie === "Tee" ? "Fairway" : shot.lie,
-      }))
-      const nextActive = Math.max(0, Math.min(activeShotIndex, updated.length - 1))
-      setActiveShotIndex(nextActive)
+      const updated = prev
+        .filter((_, i) => i !== index)
+        .map((shot, i) => ({
+          ...shot,
+          shot_number: i + 1,
+          lie: shot.is_putt ? shot.lie : getDefaultLieForShot(i + 1),
+        }))
+      setActiveShotIndex(Math.max(0, Math.min(activeShotIndex, updated.length - 1)))
       return updated
     })
   }
 
   function updateShot(index, field, value) {
     setShots((prev) =>
-      prev.map((shot, i) => (i === index ? { ...shot, [field]: value } : shot))
+      prev.map((shot, i) => {
+        if (i !== index) return shot
+        const updated = { ...shot, [field]: value }
+        if (field === "is_putt" && value === true) {
+          return {
+            ...updated,
+            lie: "Green",
+            club: "",
+            shot_result: "Pured",
+            penalty_type: "None",
+          }
+        }
+        if (field === "is_putt" && value === false) {
+          return {
+            ...updated,
+            lie: getDefaultLieForShot(index + 1),
+          }
+        }
+        return updated
+      })
     )
     setActiveShotIndex(index)
   }
@@ -282,23 +592,28 @@ function App() {
     }
   }
 
-  async function fetchRoundHoles(currentRoundId) {
-    const { data, error } = await supabase
-      .from("holes")
-      .select("*")
-      .eq("round_id", currentRoundId)
-      .order("hole_number", { ascending: true })
+  function inferHoleValuesFromShots(selectedPar, validShots) {
+    const firstPutt = validShots.find((s) => s.is_putt)
+    const secondShot = validShots[1]
 
-    if (error) {
-      alert("Could not load round summary: " + error.message)
-      return
+    const fairway =
+      selectedPar > 3 && secondShot ? !secondShot.is_putt && secondShot.lie === "Fairway" : null
+
+    const gir = firstPutt ? firstPutt.shot_number <= selectedPar - 1 : false
+    const putts = validShots.filter((s) => s.is_putt).length
+
+    return {
+      fairway,
+      gir,
+      putts,
     }
-
-    setHolesData(data || [])
   }
 
   async function finishRound() {
-    await fetchRoundHoles(roundId)
+    const bundle = await fetchRoundBundle(roundId)
+    if (!bundle) return
+    setHolesData(bundle.holes)
+    setRoundShots(bundle.shots)
     setScreen("summary")
   }
 
@@ -307,12 +622,10 @@ function App() {
       alert("Please start a round first")
       return false
     }
-
     if (par === "") {
       alert("Please choose par")
       return false
     }
-
     if (score === "" || putts === "") {
       alert("Please enter score and putts")
       return false
@@ -348,20 +661,21 @@ function App() {
       alert("Please start a round first")
       return false
     }
-
     if (par === "") {
       alert("Please choose par")
       return false
     }
 
+    const selectedPar = parseInt(par, 10)
     const validShots = getValidShots()
 
     if (validShots.length === 0) {
-      alert("Please log at least one shot with distance to flag")
+      alert("Please log at least one shot with distance to hole")
       return false
     }
 
     const totals = calculateShotModeTotals()
+    const inferred = inferHoleValuesFromShots(selectedPar, validShots)
 
     setLoading(true)
 
@@ -370,12 +684,12 @@ function App() {
       .insert({
         round_id: roundId,
         hole_number: hole,
-        par: parseInt(par, 10),
+        par: selectedPar,
         entry_mode: "shot_by_shot",
         score: totals.totalScore,
-        putts: null,
-        fairway: null,
-        gir: null,
+        putts: inferred.putts,
+        fairway: inferred.fairway,
+        gir: inferred.gir,
         penalty: totals.autoPenalty,
         skipped: false,
       })
@@ -394,12 +708,13 @@ function App() {
       hole_id: newHoleId,
       hole_number: hole,
       shot_number: index + 1,
-      lie: shot.lie,
+      lie: shot.is_putt ? "Green" : shot.lie,
       distance_to_flag: Number(shot.distance_to_flag),
-      club: shot.club || null,
-      shot_result: shot.shot_result || null,
-      penalty_type: shot.penalty_type || "None",
-      auto_penalty: getPenaltyFromType(shot.penalty_type),
+      club: shot.is_putt ? null : shot.club || null,
+      shot_result: shot.is_putt ? null : shot.shot_result || null,
+      penalty_type: shot.is_putt ? "None" : shot.penalty_type || "None",
+      auto_penalty: shot.is_putt ? 0 : getPenaltyFromType(shot.penalty_type),
+      is_putt: shot.is_putt,
     }))
 
     const { error: shotsInsertError } = await supabase.from("shots").insert(shotRows)
@@ -421,10 +736,8 @@ function App() {
     }
 
     let ok = false
-
     if (entryMode === "score") ok = await saveScoreHole()
     if (entryMode === "shot_by_shot") ok = await saveShotByShotHole()
-
     if (!ok) return
 
     if (hole >= 18) {
@@ -482,11 +795,9 @@ function App() {
     if (entryMode === "score") {
       return par !== "" || score !== "" || putts !== "" || penalty !== 0 || fairway || gir
     }
-
     if (entryMode === "shot_by_shot") {
       return par !== "" || getValidShots().length > 0
     }
-
     return false
   }
 
@@ -502,9 +813,7 @@ function App() {
       return
     }
 
-    const confirmed = window.confirm(
-      "Save current hole if possible and end the round now?"
-    )
+    const confirmed = window.confirm("Save current hole if possible and end the round now?")
     if (!confirmed) return
 
     if (!entryMode) {
@@ -513,14 +822,50 @@ function App() {
     }
 
     let ok = false
-
     if (entryMode === "score") ok = await saveScoreHole()
     if (entryMode === "shot_by_shot") ok = await saveShotByShotHole()
-
     if (!ok) return
 
     resetHoleInputs()
     await finishRound()
+  }
+
+  async function deleteRound(round) {
+    const confirmed = window.confirm(`Delete round "${round.course}" on ${round.date}?`)
+    if (!confirmed) return
+
+    setLoading(true)
+
+    const deleteShots = await supabase.from("shots").delete().eq("round_id", round.id)
+    if (deleteShots.error) {
+      setLoading(false)
+      alert("Could not delete shots: " + deleteShots.error.message)
+      return
+    }
+
+    const deleteHoles = await supabase.from("holes").delete().eq("round_id", round.id)
+    if (deleteHoles.error) {
+      setLoading(false)
+      alert("Could not delete holes: " + deleteHoles.error.message)
+      return
+    }
+
+    const deleteRoundRes = await supabase.from("rounds").delete().eq("id", round.id)
+    setLoading(false)
+
+    if (deleteRoundRes.error) {
+      alert("Could not delete round: " + deleteRoundRes.error.message)
+      return
+    }
+
+    if (selectedReviewRound?.id === round.id) {
+      setScreen("home")
+      setSelectedReviewRound(null)
+      setSelectedReviewHoles([])
+      setSelectedReviewShots([])
+    }
+
+    await loadRounds()
   }
 
   function goHomeAndReset() {
@@ -530,13 +875,21 @@ function App() {
     setCourse("")
     setDate(new Date().toISOString().slice(0, 10))
     setHolesData([])
+    setRoundShots([])
     setSelectedReviewRound(null)
     setSelectedReviewHoles([])
+    setSelectedReviewShots([])
     resetHoleInputs()
   }
 
-  const summary = useMemo(() => buildSummary(holesData), [holesData])
-  const reviewSummary = useMemo(() => buildSummary(selectedReviewHoles), [selectedReviewHoles])
+  const summary = useMemo(
+    () => buildRoundAnalytics(holesData, roundShots),
+    [holesData, roundShots]
+  )
+  const reviewSummary = useMemo(
+    () => buildRoundAnalytics(selectedReviewHoles, selectedReviewShots),
+    [selectedReviewHoles, selectedReviewShots]
+  )
   const shotTotals = useMemo(() => calculateShotModeTotals(), [shots])
 
   if (screen === "home") {
@@ -576,17 +929,25 @@ function App() {
             ) : (
               <div style={styles.roundList}>
                 {reviewRounds.map((r) => (
-                  <button
-                    key={r.id}
-                    style={styles.roundListItem}
-                    onClick={() => loadRoundDetailsForReview(r)}
-                  >
-                    <div>
-                      <div style={styles.roundCourse}>{r.course || "Untitled round"}</div>
-                      <div style={styles.roundDate}>{r.date || "-"}</div>
-                    </div>
-                    <div style={styles.roundChevron}>›</div>
-                  </button>
+                  <div key={r.id} style={styles.roundListItem}>
+                    <button
+                      style={styles.roundMainButton}
+                      onClick={() => loadRoundDetailsForReview(r)}
+                    >
+                      <div>
+                        <div style={styles.roundCourse}>{r.course || "Untitled round"}</div>
+                        <div style={styles.roundDate}>{r.date || "-"}</div>
+                      </div>
+                      <div style={styles.roundChevron}>›</div>
+                    </button>
+                    <button
+                      style={styles.deleteRoundButton}
+                      onClick={() => deleteRound(r)}
+                      disabled={loading}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -597,63 +958,85 @@ function App() {
   }
 
   if (screen === "summary") {
+    const fwChart = [
+      { label: "Hit", value: summary.fwHits, color: "#2563eb" },
+      { label: "Miss", value: summary.fwMisses, color: "#cbd5e1" },
+    ]
+
+    const girChart = [
+      { label: "GIR", value: summary.girHits, color: "#16a34a" },
+      { label: "No GIR", value: summary.girMisses, color: "#d1d5db" },
+    ]
+
+    const contactChart = Object.entries(summary.contactCounts)
+      .filter(([, value]) => value > 0)
+      .map(([label, value], idx) => ({
+        label,
+        value,
+        color: ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"][idx % 7],
+      }))
+
     return (
       <div style={styles.page}>
         <div style={styles.mobileShell}>
           <div style={styles.sectionCard}>
             <h1 style={styles.heroTitle}>Round Summary</h1>
-            <p style={styles.mutedText}>{course} • {date}</p>
+            <p style={styles.mutedText}>
+              {course} • {date}
+            </p>
 
             <div style={styles.statsGrid}>
               <StatCard label="Score" value={summary.totalScore} />
-              <StatCard label="To Par" value={summary.relativeToParText} />
+              <StatCard label="To Par" value={formatToPar(summary.totalScore, summary.totalPar)} />
               <StatCard label="Putts" value={summary.totalPutts} />
               <StatCard label="Played" value={summary.playedCount} />
-              <StatCard label="Avg / Hole" value={summary.avgScorePerPlayedHole} />
-              <StatCard label="GIR %" value={summary.girPct} />
-              <StatCard label="FW %" value={summary.fairwayPct} />
-              <StatCard label="Total Par" value={summary.totalPar} />
+              <StatCard label="Avg Drive" value={summary.avgDrive === "-" ? "-" : `${summary.avgDrive} m`} />
+              <StatCard
+                label="Avg Approach"
+                value={summary.avgApproach === "-" ? "-" : `${summary.avgApproach} m`}
+              />
+              <StatCard label="Avg Par 3" value={summary.avgPar3} />
+              <StatCard label="Avg Par 4" value={summary.avgPar4} />
+              <StatCard label="Avg Par 5" value={summary.avgPar5} />
             </div>
           </div>
 
           <div style={styles.sectionCard}>
-            <h2 style={styles.sectionTitle}>Hole Summary</h2>
-            <div style={styles.holeCardList}>
-              {holesData
-                .filter((h) => !h.skipped)
-                .map((h) => (
-                  <div key={h.id} style={styles.holeCard}>
-                    <div style={styles.holeCardTop}>
-                      <div style={styles.holeBadge}>Hole {h.hole_number}</div>
-                      <div style={styles.modePill}>{h.entry_mode ?? "-"}</div>
-                    </div>
-
-                    <div style={styles.holeStatRow}>
-                      <SmallMetric label="Par" value={h.par ?? "-"} />
-                      <SmallMetric label="Score" value={h.score ?? "-"} />
-                      <SmallMetric label="To Par" value={formatToPar(h.score, h.par)} />
-                      <SmallMetric label="Putts" value={h.putts ?? "-"} />
-                    </div>
-
-                    <div style={styles.holeMetaRow}>
-                      <span>FW: {formatBoolean(h.fairway)}</span>
-                      <span>GIR: {formatBoolean(h.gir)}</span>
-                      <span>Pen: {h.penalty ?? "-"}</span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-
-            <button style={styles.primaryButton} onClick={goHomeAndReset}>
-              Back to Home
-            </button>
+            <h2 style={styles.sectionTitle}>Scorecard</h2>
+            <Scorecard holes={summary.holes} />
           </div>
+
+          <PieChart title="Fairways" data={fwChart} />
+          <PieChart title="GIR" data={girChart} />
+          <PieChart title="Club Contact" data={contactChart} />
+
+          <button style={styles.primaryButton} onClick={goHomeAndReset}>
+            Back to Home
+          </button>
         </div>
       </div>
     )
   }
 
   if (screen === "review") {
+    const fwChart = [
+      { label: "Hit", value: reviewSummary.fwHits, color: "#2563eb" },
+      { label: "Miss", value: reviewSummary.fwMisses, color: "#cbd5e1" },
+    ]
+
+    const girChart = [
+      { label: "GIR", value: reviewSummary.girHits, color: "#16a34a" },
+      { label: "No GIR", value: reviewSummary.girMisses, color: "#d1d5db" },
+    ]
+
+    const contactChart = Object.entries(reviewSummary.contactCounts)
+      .filter(([, value]) => value > 0)
+      .map(([label, value], idx) => ({
+        label,
+        value,
+        color: ["#2563eb", "#16a34a", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316"][idx % 7],
+      }))
+
     return (
       <div style={styles.page}>
         <div style={styles.mobileShell}>
@@ -665,47 +1048,45 @@ function App() {
 
             <div style={styles.statsGrid}>
               <StatCard label="Score" value={reviewSummary.totalScore} />
-              <StatCard label="To Par" value={reviewSummary.relativeToParText} />
+              <StatCard
+                label="To Par"
+                value={formatToPar(reviewSummary.totalScore, reviewSummary.totalPar)}
+              />
               <StatCard label="Putts" value={reviewSummary.totalPutts} />
               <StatCard label="Played" value={reviewSummary.playedCount} />
-              <StatCard label="Avg / Hole" value={reviewSummary.avgScorePerPlayedHole} />
-              <StatCard label="GIR %" value={reviewSummary.girPct} />
-              <StatCard label="FW %" value={reviewSummary.fairwayPct} />
-              <StatCard label="Total Par" value={reviewSummary.totalPar} />
+              <StatCard
+                label="Avg Drive"
+                value={reviewSummary.avgDrive === "-" ? "-" : `${reviewSummary.avgDrive} m`}
+              />
+              <StatCard
+                label="Avg Approach"
+                value={reviewSummary.avgApproach === "-" ? "-" : `${reviewSummary.avgApproach} m`}
+              />
+              <StatCard label="Avg Par 3" value={reviewSummary.avgPar3} />
+              <StatCard label="Avg Par 4" value={reviewSummary.avgPar4} />
+              <StatCard label="Avg Par 5" value={reviewSummary.avgPar5} />
             </div>
           </div>
 
           <div style={styles.sectionCard}>
-            <h2 style={styles.sectionTitle}>Hole Summary</h2>
+            <h2 style={styles.sectionTitle}>Scorecard</h2>
+            <Scorecard holes={reviewSummary.holes} />
+          </div>
 
-            <div style={styles.holeCardList}>
-              {selectedReviewHoles
-                .filter((h) => !h.skipped)
-                .map((h) => (
-                  <div key={h.id} style={styles.holeCard}>
-                    <div style={styles.holeCardTop}>
-                      <div style={styles.holeBadge}>Hole {h.hole_number}</div>
-                      <div style={styles.modePill}>{h.entry_mode ?? "-"}</div>
-                    </div>
+          <PieChart title="Fairways" data={fwChart} />
+          <PieChart title="GIR" data={girChart} />
+          <PieChart title="Club Contact" data={contactChart} />
 
-                    <div style={styles.holeStatRow}>
-                      <SmallMetric label="Par" value={h.par ?? "-"} />
-                      <SmallMetric label="Score" value={h.score ?? "-"} />
-                      <SmallMetric label="To Par" value={formatToPar(h.score, h.par)} />
-                      <SmallMetric label="Putts" value={h.putts ?? "-"} />
-                    </div>
-
-                    <div style={styles.holeMetaRow}>
-                      <span>FW: {formatBoolean(h.fairway)}</span>
-                      <span>GIR: {formatBoolean(h.gir)}</span>
-                      <span>Pen: {h.penalty ?? "-"}</span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-
+          <div style={styles.buttonRow}>
             <button style={styles.primaryButton} onClick={() => setScreen("home")}>
               Back to Home
+            </button>
+            <button
+              style={styles.deleteRoundButtonLarge}
+              onClick={() => deleteRound(selectedReviewRound)}
+              disabled={loading}
+            >
+              Delete Round
             </button>
           </div>
         </div>
@@ -800,11 +1181,7 @@ function App() {
                 value={fairway}
                 onClick={() => setFairway((v) => !v)}
               />
-              <ToggleCard
-                label="GIR"
-                value={gir}
-                onClick={() => setGir((v) => !v)}
-              />
+              <ToggleCard label="GIR" value={gir} onClick={() => setGir((v) => !v)} />
             </div>
 
             <label style={styles.label}>Penalties</label>
@@ -833,72 +1210,105 @@ function App() {
                 >
                   <div style={styles.shotCardHeader}>
                     <div style={styles.shotNumber}>Shot {index + 1}</div>
-                    <button
-                      type="button"
-                      style={styles.removeGhostButton}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeShotCard(index)
-                      }}
-                    >
-                      Remove
-                    </button>
+                    <div style={styles.puttToggleRow}>
+                      <button
+                        type="button"
+                        style={{
+                          ...styles.puttToggle,
+                          ...(shot.is_putt ? styles.puttToggleActive : {}),
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          updateShot(index, "is_putt", !shot.is_putt)
+                        }}
+                      >
+                        {shot.is_putt ? "Putting" : "Mark as Putt"}
+                      </button>
+                      <button
+                        type="button"
+                        style={styles.removeGhostButton}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeShotCard(index)
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
 
-                  <label style={styles.label}>Lie</label>
-                  <select
-                    style={styles.input}
-                    value={shot.lie}
-                    onChange={(e) => updateShot(index, "lie", e.target.value)}
-                  >
-                    {LIE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-
-                  <label style={styles.label}>Distance to flag</label>
-                  <DistanceDial
+                  <label style={styles.label}>Distance to hole</label>
+                  <DistancePicker
                     value={Number(shot.distance_to_flag)}
                     onChange={(value) => updateShot(index, "distance_to_flag", value)}
                   />
 
-                  <label style={styles.label}>Club (optional)</label>
-                  <select
-                    style={styles.input}
-                    value={shot.club}
-                    onChange={(e) => updateShot(index, "club", e.target.value)}
-                  >
-                    <option value="">No club logged</option>
-                    {CLUB_OPTIONS.map((club) => (
-                      <option key={club} value={club}>{club}</option>
-                    ))}
-                  </select>
+                  {!shot.is_putt && (
+                    <>
+                      <label style={styles.label}>Lie</label>
+                      <select
+                        style={styles.input}
+                        value={shot.lie}
+                        onChange={(e) => updateShot(index, "lie", e.target.value)}
+                      >
+                        {LIE_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
 
-                  <label style={styles.label}>Ball-club contact</label>
-                  <select
-                    style={styles.input}
-                    value={shot.shot_result}
-                    onChange={(e) => updateShot(index, "shot_result", e.target.value)}
-                  >
-                    {SHOT_RESULT_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                      <label style={styles.label}>Club (optional)</label>
+                      <select
+                        style={styles.input}
+                        value={shot.club}
+                        onChange={(e) => updateShot(index, "club", e.target.value)}
+                      >
+                        <option value="">No club logged</option>
+                        {CLUB_OPTIONS.map((club) => (
+                          <option key={club} value={club}>
+                            {club}
+                          </option>
+                        ))}
+                      </select>
 
-                  <label style={styles.label}>Penalty result</label>
-                  <select
-                    style={styles.input}
-                    value={shot.penalty_type}
-                    onChange={(e) => updateShot(index, "penalty_type", e.target.value)}
-                  >
-                    {PENALTY_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                      <label style={styles.label}>Ball-club contact</label>
+                      <select
+                        style={styles.input}
+                        value={shot.shot_result}
+                        onChange={(e) => updateShot(index, "shot_result", e.target.value)}
+                      >
+                        {SHOT_RESULT_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
 
-                  <div style={styles.shotPenaltyInfo}>
-                    Auto penalty: {getPenaltyFromType(shot.penalty_type)}
-                  </div>
+                      <label style={styles.label}>Penalty result</label>
+                      <select
+                        style={styles.input}
+                        value={shot.penalty_type}
+                        onChange={(e) => updateShot(index, "penalty_type", e.target.value)}
+                      >
+                        {PENALTY_TYPE_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div style={styles.shotPenaltyInfo}>
+                        Auto penalty: {getPenaltyFromType(shot.penalty_type)}
+                      </div>
+                    </>
+                  )}
+
+                  {shot.is_putt && (
+                    <div style={styles.puttInfoBox}>
+                      Putting shot: only distance to hole is required.
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -947,24 +1357,6 @@ function App() {
   )
 }
 
-function StatCard({ label, value }) {
-  return (
-    <div style={styles.statCard}>
-      <div style={styles.statValue}>{value}</div>
-      <div style={styles.statLabel}>{label}</div>
-    </div>
-  )
-}
-
-function SmallMetric({ label, value }) {
-  return (
-    <div style={styles.smallMetric}>
-      <div style={styles.smallMetricLabel}>{label}</div>
-      <div style={styles.smallMetricValue}>{value}</div>
-    </div>
-  )
-}
-
 function ToggleCard({ label, value, onClick }) {
   return (
     <button
@@ -981,57 +1373,49 @@ function ToggleCard({ label, value, onClick }) {
   )
 }
 
-function buildSummary(holes) {
-  const playedHoles = holes.filter((h) => !h.skipped)
+function Scorecard({ holes }) {
+  const front = holes.filter((h) => h.hole_number <= 9)
+  const back = holes.filter((h) => h.hole_number >= 10)
 
-  const totalScore = playedHoles.reduce((sum, h) => sum + (h.score || 0), 0)
-  const totalPar = playedHoles.reduce((sum, h) => sum + (h.par || 0), 0)
-  const totalPutts = playedHoles.reduce((sum, h) => sum + (h.putts || 0), 0)
+  const renderNine = (label, list) => {
+    const score = list.reduce((s, h) => s + (h.score || 0), 0)
+    const par = list.reduce((s, h) => s + (h.par || 0), 0)
 
-  const girEligible = playedHoles.filter((h) => h.gir !== null && h.gir !== undefined)
-  const fairwayEligible = playedHoles.filter((h) => h.fairway !== null && h.fairway !== undefined)
+    return (
+      <div style={styles.scorecardSection}>
+        <div style={styles.scorecardHeaderRow}>
+          <div style={styles.scorecardTitle}>{label}</div>
+          <div style={styles.scorecardSubtotal}>
+            {score} ({formatToPar(score, par)})
+          </div>
+        </div>
 
-  const girCount = girEligible.filter((h) => h.gir).length
-  const fairwayCount = fairwayEligible.filter((h) => h.fairway).length
-
-  const girPct =
-    girEligible.length > 0 ? ((girCount / girEligible.length) * 100).toFixed(1) : "0.0"
-
-  const fairwayPct =
-    fairwayEligible.length > 0
-      ? ((fairwayCount / fairwayEligible.length) * 100).toFixed(1)
-      : "0.0"
-
-  const relativeToPar = totalScore - totalPar
-  const relativeToParText = relativeToPar > 0 ? `+${relativeToPar}` : `${relativeToPar}`
-
-  const avgScorePerPlayedHole =
-    playedHoles.length > 0 ? (totalScore / playedHoles.length).toFixed(2) : "0.00"
-
-  return {
-    playedCount: playedHoles.length,
-    totalScore,
-    totalPar,
-    totalPutts,
-    girCount,
-    fairwayCount,
-    girPct,
-    fairwayPct,
-    relativeToParText,
-    avgScorePerPlayedHole,
+        <div style={styles.scorecardGrid}>
+          {list.map((h) => (
+            <div key={h.id} style={styles.scoreCell}>
+              <div style={styles.scoreHoleNo}>{h.hole_number}</div>
+              <div style={{ ...styles.scoreBadge, ...scoreStyle(h.score, h.par) }}>{h.score}</div>
+              <div style={styles.scoreSymbol}>{scoreLabel(h.score, h.par)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
-}
 
-function formatBoolean(value) {
-  if (value === null || value === undefined) return "-"
-  return value ? "Yes" : "No"
-}
-
-function formatToPar(score, par) {
-  if (score == null || par == null) return "-"
-  const diff = score - par
-  if (diff > 0) return `+${diff}`
-  return `${diff}`
+  return (
+    <>
+      {renderNine("Front 9", front)}
+      {renderNine("Back 9", back)}
+      <div style={styles.scoreLegend}>
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreEagle }}>E</span> Eagle+
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreBirdie }}>B</span> Birdie
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scorePar }}>P</span> Par
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreBogey }}>Bo</span> Bogey
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreDouble }}>D</span> Double+
+      </div>
+    </>
+  )
 }
 
 const styles = {
@@ -1073,9 +1457,57 @@ const styles = {
     borderRadius: "18px",
     boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
   },
+  chartCard: {
+    background: "white",
+    padding: "16px",
+    borderRadius: "18px",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+  },
+  chartTitle: {
+    fontSize: "20px",
+    fontWeight: 800,
+    marginBottom: "12px",
+  },
+  chartWrap: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+    alignItems: "center",
+  },
+  pie: {
+    width: "180px",
+    height: "180px",
+    borderRadius: "50%",
+    border: "12px solid white",
+    boxShadow: "inset 0 0 0 1px #e5e7eb",
+  },
+  legend: {
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  legendRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  legendSwatch: {
+    width: "12px",
+    height: "12px",
+    borderRadius: "999px",
+  },
+  legendText: {
+    fontSize: "14px",
+  },
+  noData: {
+    color: "#6b7280",
+    padding: "12px 0",
+  },
   sectionTitle: {
     margin: 0,
     fontSize: "20px",
+    fontWeight: 800,
   },
   mutedText: {
     color: "#6b7280",
@@ -1111,6 +1543,23 @@ const styles = {
     color: "white",
     cursor: "pointer",
   },
+  deleteRoundButtonLarge: {
+    width: "100%",
+    minHeight: "50px",
+    border: "none",
+    borderRadius: "16px",
+    fontSize: "16px",
+    fontWeight: 700,
+    background: "#dc2626",
+    color: "white",
+    cursor: "pointer",
+  },
+  buttonRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: "10px",
+    marginTop: "10px",
+  },
   roundList: {
     display: "flex",
     flexDirection: "column",
@@ -1118,15 +1567,20 @@ const styles = {
     marginTop: "8px",
   },
   roundListItem: {
-    width: "100%",
     background: "#f9fafb",
     border: "1px solid #e5e7eb",
     borderRadius: "16px",
-    padding: "14px",
+    padding: "10px",
+  },
+  roundMainButton: {
+    width: "100%",
+    background: "transparent",
+    border: "none",
     display: "flex",
-    alignItems: "center",
     justifyContent: "space-between",
+    alignItems: "center",
     textAlign: "left",
+    padding: "4px 0",
     cursor: "pointer",
   },
   roundCourse: {
@@ -1142,6 +1596,17 @@ const styles = {
     fontSize: "28px",
     color: "#9ca3af",
     lineHeight: 1,
+  },
+  deleteRoundButton: {
+    marginTop: "10px",
+    width: "100%",
+    minHeight: "42px",
+    borderRadius: "12px",
+    border: "1px solid #fecaca",
+    background: "#fff1f2",
+    color: "#b91c1c",
+    fontWeight: 700,
+    cursor: "pointer",
   },
   playHeader: {
     display: "flex",
@@ -1255,12 +1720,32 @@ const styles = {
   shotCardHeader: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    gap: "12px",
+    alignItems: "flex-start",
+    gap: "10px",
   },
   shotNumber: {
     fontWeight: 800,
     fontSize: "17px",
+  },
+  puttToggleRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    alignItems: "flex-end",
+  },
+  puttToggle: {
+    border: "1px solid #d1d5db",
+    background: "white",
+    color: "#111827",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  puttToggleActive: {
+    background: "#16a34a",
+    color: "white",
+    border: "1px solid #16a34a",
   },
   removeGhostButton: {
     border: "none",
@@ -1270,36 +1755,14 @@ const styles = {
     cursor: "pointer",
     fontSize: "14px",
   },
-  dialWrap: {
-    marginTop: "4px",
-    border: "1px solid #d1d5db",
-    borderRadius: "16px",
-    padding: "12px",
-    background: "white",
-  },
-  dialValue: {
-    textAlign: "center",
-    fontSize: "28px",
-    fontWeight: 800,
-    marginBottom: "12px",
-  },
-  dialRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "8px",
-  },
-  dialButton: {
-    minHeight: "42px",
-    borderRadius: "12px",
-    border: "1px solid #d1d5db",
-    background: "#f9fafb",
-    fontWeight: 700,
-    fontSize: "14px",
-    cursor: "pointer",
-  },
-  rangeInput: {
-    width: "100%",
+  puttInfoBox: {
     marginTop: "12px",
+    fontSize: "14px",
+    color: "#166534",
+    background: "#f0fdf4",
+    padding: "10px 12px",
+    borderRadius: "12px",
+    border: "1px solid #bbf7d0",
   },
   shotPenaltyInfo: {
     marginTop: "12px",
@@ -1393,7 +1856,7 @@ const styles = {
     padding: "14px",
   },
   statValue: {
-    fontSize: "24px",
+    fontSize: "22px",
     fontWeight: 800,
   },
   statLabel: {
@@ -1401,64 +1864,103 @@ const styles = {
     fontSize: "13px",
     color: "#6b7280",
   },
-  holeCardList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
+  scorecardSection: {
     marginTop: "12px",
   },
-  holeCard: {
-    background: "#fafafa",
-    border: "1px solid #e5e7eb",
-    borderRadius: "16px",
-    padding: "14px",
-  },
-  holeCardTop: {
+  scorecardHeaderRow: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: "12px",
-    marginBottom: "12px",
+    marginBottom: "8px",
   },
-  holeBadge: {
+  scorecardTitle: {
     fontWeight: 800,
     fontSize: "16px",
   },
-  modePill: {
-    background: "#e5e7eb",
-    color: "#374151",
-    borderRadius: "999px",
-    padding: "6px 10px",
-    fontSize: "12px",
+  scorecardSubtotal: {
     fontWeight: 700,
-    whiteSpace: "nowrap",
+    color: "#374151",
   },
-  holeStatRow: {
+  scorecardGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: "8px",
   },
-  smallMetric: {
-    background: "white",
-    borderRadius: "12px",
-    padding: "10px",
+  scoreCell: {
+    background: "#f9fafb",
     border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    padding: "10px",
+    textAlign: "center",
   },
-  smallMetricLabel: {
-    color: "#6b7280",
+  scoreHoleNo: {
     fontSize: "12px",
+    color: "#6b7280",
+    marginBottom: "6px",
   },
-  smallMetricValue: {
+  scoreBadge: {
+    width: "44px",
+    height: "44px",
+    margin: "0 auto",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     fontWeight: 800,
     fontSize: "18px",
-    marginTop: "4px",
   },
-  holeMetaRow: {
+  scoreBadgeSmall: {
+    width: "26px",
+    height: "26px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: "4px",
+    marginLeft: "10px",
+    fontSize: "11px",
+    fontWeight: 800,
+  },
+  scoreSymbol: {
+    marginTop: "6px",
+    fontSize: "11px",
+    color: "#4b5563",
+  },
+  scoreEagle: {
+    borderRadius: "50%",
+    border: "3px double #16a34a",
+    background: "#f0fdf4",
+    color: "#166534",
+  },
+  scoreBirdie: {
+    borderRadius: "50%",
+    border: "2px solid #2563eb",
+    background: "#eff6ff",
+    color: "#1d4ed8",
+  },
+  scorePar: {
+    borderRadius: "12px",
+    border: "1px solid #d1d5db",
+    background: "white",
+    color: "#111827",
+  },
+  scoreBogey: {
+    borderRadius: "4px",
+    border: "2px solid #f59e0b",
+    background: "#fffbeb",
+    color: "#92400e",
+  },
+  scoreDouble: {
+    borderRadius: "4px",
+    border: "3px double #dc2626",
+    background: "#fef2f2",
+    color: "#991b1b",
+  },
+  scoreLegend: {
+    marginTop: "14px",
     display: "flex",
     flexWrap: "wrap",
-    gap: "10px",
-    marginTop: "12px",
-    fontSize: "13px",
+    gap: "6px",
+    alignItems: "center",
+    fontSize: "12px",
     color: "#4b5563",
   },
 }
