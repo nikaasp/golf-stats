@@ -63,24 +63,20 @@ function App() {
   const [course, setCourse] = useState("")
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
 
-  const [roundFinished, setRoundFinished] = useState(false)
   const [holesData, setHolesData] = useState([])
   const [reviewRounds, setReviewRounds] = useState([])
   const [selectedReviewRound, setSelectedReviewRound] = useState(null)
   const [selectedReviewHoles, setSelectedReviewHoles] = useState([])
 
-  // Per-hole common
   const [par, setPar] = useState("")
   const [entryMode, setEntryMode] = useState("")
 
-  // Score mode
   const [score, setScore] = useState("")
   const [putts, setPutts] = useState("")
   const [fairway, setFairway] = useState(false)
   const [gir, setGir] = useState(false)
   const [penalty, setPenalty] = useState(0)
 
-  // Shot-by-shot mode
   const [shots, setShots] = useState([makeShot(1)])
 
   useEffect(() => {
@@ -149,9 +145,8 @@ function App() {
 
     setRoundId(data[0].id)
     setHole(1)
-    setRoundFinished(false)
-    setHolesData([])
     resetHoleInputs()
+    setHolesData([])
     setScreen("play")
   }
 
@@ -174,11 +169,11 @@ function App() {
     resetShotInputs()
   }
 
-  function addShotRow() {
+  function addShotCard() {
     setShots((prev) => [...prev, makeShot(prev.length + 1)])
   }
 
-  function removeShotRow(index) {
+  function removeShotCard(index) {
     setShots((prev) => {
       if (prev.length === 1) return prev
       const updated = prev.filter((_, i) => i !== index)
@@ -198,11 +193,11 @@ function App() {
   function getValidShots() {
     return shots.filter(
       (s) =>
-        s.lie ||
         s.distance_to_flag !== "" ||
         s.club !== "" ||
-        s.shot_result !== "" ||
-        s.penalty_type !== "None"
+        s.penalty_type !== "None" ||
+        s.lie !== "Fairway" ||
+        s.shot_result !== "Pured"
     )
   }
 
@@ -238,7 +233,6 @@ function App() {
 
   async function finishRound() {
     await fetchRoundHoles(roundId)
-    setRoundFinished(true)
     setScreen("summary")
   }
 
@@ -362,13 +356,8 @@ function App() {
 
     let ok = false
 
-    if (entryMode === "score") {
-      ok = await saveScoreHole()
-    }
-
-    if (entryMode === "shot_by_shot") {
-      ok = await saveShotByShotHole()
-    }
+    if (entryMode === "score") ok = await saveScoreHole()
+    if (entryMode === "shot_by_shot") ok = await saveShotByShotHole()
 
     if (!ok) return
 
@@ -474,8 +463,9 @@ function App() {
     setHole(1)
     setCourse("")
     setDate(new Date().toISOString().slice(0, 10))
-    setRoundFinished(false)
     setHolesData([])
+    setSelectedReviewRound(null)
+    setSelectedReviewHoles([])
     resetHoleInputs()
   }
 
@@ -486,11 +476,10 @@ function App() {
   if (screen === "home") {
     return (
       <div style={styles.page}>
-        <div style={styles.cardWide}>
-          <h1 style={styles.title}>Golf Stats Tracker</h1>
-
-          <div style={styles.sectionBox}>
-            <h2 style={styles.sectionTitle}>Start new round</h2>
+        <div style={styles.mobileShell}>
+          <div style={styles.heroCard}>
+            <h1 style={styles.heroTitle}>Golf Stats</h1>
+            <p style={styles.heroText}>Quick logging for the course.</p>
 
             <label style={styles.label}>Course name</label>
             <input
@@ -513,38 +502,28 @@ function App() {
             </button>
           </div>
 
-          <div style={styles.sectionBox}>
-            <h2 style={styles.sectionTitle}>Review rounds</h2>
+          <div style={styles.sectionCard}>
+            <div style={styles.sectionHeaderRow}>
+              <h2 style={styles.sectionTitle}>Previous Rounds</h2>
+            </div>
 
             {reviewRounds.length === 0 ? (
-              <p>No saved rounds yet.</p>
+              <p style={styles.mutedText}>No saved rounds yet.</p>
             ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Date</th>
-                      <th style={styles.th}>Course</th>
-                      <th style={styles.th}>Open</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reviewRounds.map((r) => (
-                      <tr key={r.id}>
-                        <td style={styles.td}>{r.date ?? "-"}</td>
-                        <td style={styles.td}>{r.course ?? "-"}</td>
-                        <td style={styles.td}>
-                          <button
-                            style={styles.smallButton}
-                            onClick={() => loadRoundDetailsForReview(r)}
-                          >
-                            Review
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={styles.roundList}>
+                {reviewRounds.map((r) => (
+                  <button
+                    key={r.id}
+                    style={styles.roundListItem}
+                    onClick={() => loadRoundDetailsForReview(r)}
+                  >
+                    <div>
+                      <div style={styles.roundCourse}>{r.course || "Untitled round"}</div>
+                      <div style={styles.roundDate}>{r.date || "-"}</div>
+                    </div>
+                    <div style={styles.roundChevron}>›</div>
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -556,62 +535,50 @@ function App() {
   if (screen === "summary") {
     return (
       <div style={styles.page}>
-        <div style={styles.cardWide}>
-          <h1 style={styles.title}>Round Summary</h1>
+        <div style={styles.mobileShell}>
+          <div style={styles.sectionCard}>
+            <h1 style={styles.heroTitle}>Round Summary</h1>
+            <p style={styles.mutedText}>{course} • {date}</p>
 
-          <p><strong>Course:</strong> {course}</p>
-          <p><strong>Date:</strong> {date}</p>
-          <p><strong>Holes recorded:</strong> {holesData.length}</p>
-          <p><strong>Played holes:</strong> {summary.playedCount}</p>
-          <p><strong>Skipped holes:</strong> {summary.skippedCount}</p>
-          <p><strong>Total score:</strong> {summary.totalScore}</p>
-          <p><strong>Total par:</strong> {summary.totalPar}</p>
-          <p><strong>Relative to par:</strong> {summary.relativeToParText}</p>
-          <p><strong>Average score / played hole:</strong> {summary.avgScorePerPlayedHole}</p>
-          <p><strong>Total putts:</strong> {summary.totalPutts}</p>
-          <p><strong>GIR:</strong> {summary.girCount} ({summary.girPct}%)</p>
-          <p><strong>Fairways:</strong> {summary.fairwayCount} ({summary.fairwayPct}%)</p>
-          <p><strong>Shot-by-shot holes:</strong> {summary.shotByShotCount}</p>
-          <p><strong>Score-only holes:</strong> {summary.scoreModeCount}</p>
-
-          <h2 style={{ marginTop: 24 }}>Hole summary</h2>
-
-          <div style={{ overflowX: "auto" }}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Hole</th>
-                  <th style={styles.th}>Mode</th>
-                  <th style={styles.th}>Par</th>
-                  <th style={styles.th}>Score</th>
-                  <th style={styles.th}>To Par</th>
-                  <th style={styles.th}>Putts</th>
-                  <th style={styles.th}>FW</th>
-                  <th style={styles.th}>GIR</th>
-                  <th style={styles.th}>Penalty</th>
-                  <th style={styles.th}>Skipped</th>
-                </tr>
-              </thead>
-              <tbody>
-                {holesData.map((h) => (
-                  <tr key={h.id}>
-                    <td style={styles.td}>{h.hole_number}</td>
-                    <td style={styles.td}>{h.entry_mode ?? "-"}</td>
-                    <td style={styles.td}>{h.par ?? "-"}</td>
-                    <td style={styles.td}>{h.score ?? "-"}</td>
-                    <td style={styles.td}>{formatToPar(h.score, h.par)}</td>
-                    <td style={styles.td}>{h.putts ?? "-"}</td>
-                    <td style={styles.td}>{formatBoolean(h.fairway)}</td>
-                    <td style={styles.td}>{formatBoolean(h.gir)}</td>
-                    <td style={styles.td}>{h.penalty ?? "-"}</td>
-                    <td style={styles.td}>{h.skipped ? "Yes" : "No"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={styles.statsGrid}>
+              <StatCard label="Score" value={summary.totalScore} />
+              <StatCard label="To Par" value={summary.relativeToParText} />
+              <StatCard label="Putts" value={summary.totalPutts} />
+              <StatCard label="Played" value={summary.playedCount} />
+              <StatCard label="Skipped" value={summary.skippedCount} />
+              <StatCard label="Avg / Hole" value={summary.avgScorePerPlayedHole} />
+              <StatCard label="GIR %" value={summary.girPct} />
+              <StatCard label="FW %" value={summary.fairwayPct} />
+            </div>
           </div>
 
-          <div style={styles.buttonRow}>
+          <div style={styles.sectionCard}>
+            <h2 style={styles.sectionTitle}>Hole Summary</h2>
+            <div style={styles.holeCardList}>
+              {holesData.map((h) => (
+                <div key={h.id} style={styles.holeCard}>
+                  <div style={styles.holeCardTop}>
+                    <div style={styles.holeBadge}>Hole {h.hole_number}</div>
+                    <div style={styles.modePill}>{h.entry_mode ?? "-"}</div>
+                  </div>
+
+                  <div style={styles.holeStatRow}>
+                    <SmallMetric label="Par" value={h.par ?? "-"} />
+                    <SmallMetric label="Score" value={h.score ?? "-"} />
+                    <SmallMetric label="To Par" value={formatToPar(h.score, h.par)} />
+                    <SmallMetric label="Putts" value={h.putts ?? "-"} />
+                  </div>
+
+                  <div style={styles.holeMetaRow}>
+                    <span>FW: {formatBoolean(h.fairway)}</span>
+                    <span>GIR: {formatBoolean(h.gir)}</span>
+                    <span>Pen: {h.penalty ?? "-"}</span>
+                    <span>Skipped: {h.skipped ? "Yes" : "No"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <button style={styles.primaryButton} onClick={goHomeAndReset}>
               Back to Home
             </button>
@@ -624,58 +591,53 @@ function App() {
   if (screen === "review") {
     return (
       <div style={styles.page}>
-        <div style={styles.cardWide}>
-          <h1 style={styles.title}>Review Round</h1>
+        <div style={styles.mobileShell}>
+          <div style={styles.sectionCard}>
+            <h1 style={styles.heroTitle}>Review Round</h1>
+            <p style={styles.mutedText}>
+              {selectedReviewRound?.course ?? "-"} • {selectedReviewRound?.date ?? "-"}
+            </p>
 
-          <p><strong>Course:</strong> {selectedReviewRound?.course ?? "-"}</p>
-          <p><strong>Date:</strong> {selectedReviewRound?.date ?? "-"}</p>
-          <p><strong>Played holes:</strong> {reviewSummary.playedCount}</p>
-          <p><strong>Skipped holes:</strong> {reviewSummary.skippedCount}</p>
-          <p><strong>Total score:</strong> {reviewSummary.totalScore}</p>
-          <p><strong>Total par:</strong> {reviewSummary.totalPar}</p>
-          <p><strong>Relative to par:</strong> {reviewSummary.relativeToParText}</p>
-          <p><strong>Total putts:</strong> {reviewSummary.totalPutts}</p>
-          <p><strong>GIR:</strong> {reviewSummary.girCount} ({reviewSummary.girPct}%)</p>
-          <p><strong>Fairways:</strong> {reviewSummary.fairwayCount} ({reviewSummary.fairwayPct}%)</p>
-
-          <h2 style={{ marginTop: 24 }}>Hole summary</h2>
-
-          <div style={{ overflowX: "auto" }}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Hole</th>
-                  <th style={styles.th}>Mode</th>
-                  <th style={styles.th}>Par</th>
-                  <th style={styles.th}>Score</th>
-                  <th style={styles.th}>To Par</th>
-                  <th style={styles.th}>Putts</th>
-                  <th style={styles.th}>FW</th>
-                  <th style={styles.th}>GIR</th>
-                  <th style={styles.th}>Penalty</th>
-                  <th style={styles.th}>Skipped</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedReviewHoles.map((h) => (
-                  <tr key={h.id}>
-                    <td style={styles.td}>{h.hole_number}</td>
-                    <td style={styles.td}>{h.entry_mode ?? "-"}</td>
-                    <td style={styles.td}>{h.par ?? "-"}</td>
-                    <td style={styles.td}>{h.score ?? "-"}</td>
-                    <td style={styles.td}>{formatToPar(h.score, h.par)}</td>
-                    <td style={styles.td}>{h.putts ?? "-"}</td>
-                    <td style={styles.td}>{formatBoolean(h.fairway)}</td>
-                    <td style={styles.td}>{formatBoolean(h.gir)}</td>
-                    <td style={styles.td}>{h.penalty ?? "-"}</td>
-                    <td style={styles.td}>{h.skipped ? "Yes" : "No"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={styles.statsGrid}>
+              <StatCard label="Score" value={reviewSummary.totalScore} />
+              <StatCard label="To Par" value={reviewSummary.relativeToParText} />
+              <StatCard label="Putts" value={reviewSummary.totalPutts} />
+              <StatCard label="Played" value={reviewSummary.playedCount} />
+              <StatCard label="Skipped" value={reviewSummary.skippedCount} />
+              <StatCard label="GIR %" value={reviewSummary.girPct} />
+              <StatCard label="FW %" value={reviewSummary.fairwayPct} />
+              <StatCard label="Avg / Hole" value={reviewSummary.avgScorePerPlayedHole} />
+            </div>
           </div>
 
-          <div style={styles.buttonRow}>
+          <div style={styles.sectionCard}>
+            <h2 style={styles.sectionTitle}>Hole Summary</h2>
+
+            <div style={styles.holeCardList}>
+              {selectedReviewHoles.map((h) => (
+                <div key={h.id} style={styles.holeCard}>
+                  <div style={styles.holeCardTop}>
+                    <div style={styles.holeBadge}>Hole {h.hole_number}</div>
+                    <div style={styles.modePill}>{h.entry_mode ?? "-"}</div>
+                  </div>
+
+                  <div style={styles.holeStatRow}>
+                    <SmallMetric label="Par" value={h.par ?? "-"} />
+                    <SmallMetric label="Score" value={h.score ?? "-"} />
+                    <SmallMetric label="To Par" value={formatToPar(h.score, h.par)} />
+                    <SmallMetric label="Putts" value={h.putts ?? "-"} />
+                  </div>
+
+                  <div style={styles.holeMetaRow}>
+                    <span>FW: {formatBoolean(h.fairway)}</span>
+                    <span>GIR: {formatBoolean(h.gir)}</span>
+                    <span>Pen: {h.penalty ?? "-"}</span>
+                    <span>Skipped: {h.skipped ? "Yes" : "No"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <button style={styles.primaryButton} onClick={() => setScreen("home")}>
               Back to Home
             </button>
@@ -687,84 +649,89 @@ function App() {
 
   return (
     <div style={styles.page}>
-      <div style={styles.cardWide}>
-        <h1 style={styles.title}>Golf Stats Tracker</h1>
+      <div style={styles.mobileShell}>
+        <div style={styles.sectionCard}>
+          <div style={styles.playHeader}>
+            <div>
+              <div style={styles.playCourse}>{course}</div>
+              <div style={styles.playDate}>{date}</div>
+            </div>
+            <div style={styles.holeCounter}>Hole {hole}/18</div>
+          </div>
 
-        <p style={styles.roundInfo}><strong>Course:</strong> {course}</p>
-        <p style={styles.roundInfo}><strong>Date:</strong> {date}</p>
-        <p style={styles.roundInfo}><strong>Hole:</strong> {hole} / 18</p>
+          <label style={styles.label}>Par</label>
+          <input
+            style={styles.input}
+            type="number"
+            value={par}
+            onChange={(e) => setPar(e.target.value)}
+            placeholder="Enter par"
+          />
 
-        <label style={styles.label}>Par</label>
-        <input
-          style={styles.input}
-          type="number"
-          value={par}
-          onChange={(e) => setPar(e.target.value)}
-          placeholder="Enter par"
-        />
+          <label style={styles.label}>How do you want to log this hole?</label>
+          <div style={styles.segmentedWrap}>
+            <button
+              type="button"
+              style={{
+                ...styles.segmentedButton,
+                ...(entryMode === "shot_by_shot" ? styles.segmentedActive : {}),
+              }}
+              onClick={() => setEntryMode("shot_by_shot")}
+            >
+              Shot by shot
+            </button>
 
-        <label style={styles.label}>How do you want to log this hole?</label>
-        <div style={styles.modeRow}>
-          <button
-            type="button"
-            style={{
-              ...styles.modeButton,
-              ...(entryMode === "shot_by_shot" ? styles.modeButtonActive : {}),
-            }}
-            onClick={() => setEntryMode("shot_by_shot")}
-          >
-            Shot by shot
-          </button>
-
-          <button
-            type="button"
-            style={{
-              ...styles.modeButton,
-              ...(entryMode === "score" ? styles.modeButtonActive : {}),
-            }}
-            onClick={() => setEntryMode("score")}
-          >
-            Score
-          </button>
+            <button
+              type="button"
+              style={{
+                ...styles.segmentedButton,
+                ...(entryMode === "score" ? styles.segmentedActive : {}),
+              }}
+              onClick={() => setEntryMode("score")}
+            >
+              Score
+            </button>
+          </div>
         </div>
 
         {entryMode === "score" && (
-          <div style={styles.sectionBox}>
-            <h2 style={styles.sectionTitle}>Score mode</h2>
+          <div style={styles.sectionCard}>
+            <h2 style={styles.sectionTitle}>Score Mode</h2>
 
-            <label style={styles.label}>Score</label>
-            <input
-              style={styles.input}
-              type="number"
-              value={score}
-              onChange={(e) => setScore(e.target.value)}
-            />
+            <div style={styles.twoColGrid}>
+              <div>
+                <label style={styles.label}>Score</label>
+                <input
+                  style={styles.input}
+                  type="number"
+                  value={score}
+                  onChange={(e) => setScore(e.target.value)}
+                />
+              </div>
 
-            <label style={styles.label}>Putts</label>
-            <input
-              style={styles.input}
-              type="number"
-              value={putts}
-              onChange={(e) => setPutts(e.target.value)}
-            />
+              <div>
+                <label style={styles.label}>Putts</label>
+                <input
+                  style={styles.input}
+                  type="number"
+                  value={putts}
+                  onChange={(e) => setPutts(e.target.value)}
+                />
+              </div>
+            </div>
 
-            <label style={styles.checkboxRow}>
-              <input
-                type="checkbox"
-                checked={fairway}
-                onChange={(e) => setFairway(e.target.checked)}
+            <div style={styles.twoColGrid}>
+              <ToggleCard
+                label="Fairway hit"
+                value={fairway}
+                onClick={() => setFairway((v) => !v)}
               />
-              <span>Fairway hit (optional)</span>
-            </label>
-
-            <label style={styles.checkboxRow}>
-              <input
-                type="checkbox"
-                checked={gir}
-                onChange={(e) => setGir(e.target.checked)}
+              <ToggleCard
+                label="GIR"
+                value={gir}
+                onClick={() => setGir((v) => !v)}
               />
-              <span>GIR (optional)</span>
-            </label>
+            </div>
 
             <label style={styles.label}>Penalties</label>
             <input
@@ -777,132 +744,160 @@ function App() {
         )}
 
         {entryMode === "shot_by_shot" && (
-          <div style={styles.sectionBox}>
-            <h2 style={styles.sectionTitle}>Shot-by-shot mode</h2>
-
-            <div style={{ overflowX: "auto" }}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>#</th>
-                    <th style={styles.th}>Lie</th>
-                    <th style={styles.th}>Dist. to flag</th>
-                    <th style={styles.th}>Club</th>
-                    <th style={styles.th}>Contact</th>
-                    <th style={styles.th}>Penalty</th>
-                    <th style={styles.th}>Remove</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shots.map((shot, index) => (
-                    <tr key={index}>
-                      <td style={styles.td}>{index + 1}</td>
-
-                      <td style={styles.td}>
-                        <select
-                          style={styles.tableInput}
-                          value={shot.lie}
-                          onChange={(e) => updateShot(index, "lie", e.target.value)}
-                        >
-                          {LIE_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      </td>
-
-                      <td style={styles.td}>
-                        <input
-                          style={styles.tableInput}
-                          type="number"
-                          value={shot.distance_to_flag}
-                          onChange={(e) => updateShot(index, "distance_to_flag", e.target.value)}
-                          placeholder="145"
-                        />
-                      </td>
-
-                      <td style={styles.td}>
-                        <select
-                          style={styles.tableInput}
-                          value={shot.club}
-                          onChange={(e) => updateShot(index, "club", e.target.value)}
-                        >
-                          <option value="">Select club</option>
-                          {CLUB_OPTIONS.map((club) => (
-                            <option key={club} value={club}>{club}</option>
-                          ))}
-                        </select>
-                      </td>
-
-                      <td style={styles.td}>
-                        <select
-                          style={styles.tableInput}
-                          value={shot.shot_result}
-                          onChange={(e) => updateShot(index, "shot_result", e.target.value)}
-                        >
-                          {SHOT_RESULT_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      </td>
-
-                      <td style={styles.td}>
-                        <select
-                          style={styles.tableInput}
-                          value={shot.penalty_type}
-                          onChange={(e) => updateShot(index, "penalty_type", e.target.value)}
-                        >
-                          {PENALTY_TYPE_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      </td>
-
-                      <td style={styles.td}>
-                        <button
-                          type="button"
-                          style={styles.smallButton}
-                          onClick={() => removeShotRow(index)}
-                        >
-                          X
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div style={styles.sectionCard}>
+            <div style={styles.sectionHeaderRow}>
+              <h2 style={styles.sectionTitle}>Shot-by-Shot</h2>
+              <button type="button" style={styles.smallButton} onClick={addShotCard}>
+                + Add Shot
+              </button>
             </div>
 
-            <button type="button" style={styles.secondaryButton} onClick={addShotRow}>
-              Add shot row
-            </button>
+            <div style={styles.shotCardList}>
+              {shots.map((shot, index) => (
+                <div key={index} style={styles.shotCard}>
+                  <div style={styles.shotCardHeader}>
+                    <div style={styles.shotNumber}>Shot {index + 1}</div>
+                    <button
+                      type="button"
+                      style={styles.removeGhostButton}
+                      onClick={() => removeShotCard(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  <label style={styles.label}>Lie</label>
+                  <select
+                    style={styles.input}
+                    value={shot.lie}
+                    onChange={(e) => updateShot(index, "lie", e.target.value)}
+                  >
+                    {LIE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+
+                  <label style={styles.label}>Distance to flag</label>
+                  <input
+                    style={styles.input}
+                    type="number"
+                    value={shot.distance_to_flag}
+                    onChange={(e) => updateShot(index, "distance_to_flag", e.target.value)}
+                    placeholder="145"
+                  />
+
+                  <label style={styles.label}>Club</label>
+                  <select
+                    style={styles.input}
+                    value={shot.club}
+                    onChange={(e) => updateShot(index, "club", e.target.value)}
+                  >
+                    <option value="">Select club</option>
+                    {CLUB_OPTIONS.map((club) => (
+                      <option key={club} value={club}>{club}</option>
+                    ))}
+                  </select>
+
+                  <label style={styles.label}>Ball-club contact</label>
+                  <select
+                    style={styles.input}
+                    value={shot.shot_result}
+                    onChange={(e) => updateShot(index, "shot_result", e.target.value)}
+                  >
+                    {SHOT_RESULT_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+
+                  <label style={styles.label}>Penalty result</label>
+                  <select
+                    style={styles.input}
+                    value={shot.penalty_type}
+                    onChange={(e) => updateShot(index, "penalty_type", e.target.value)}
+                  >
+                    {PENALTY_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+
+                  <div style={styles.shotPenaltyInfo}>
+                    Auto penalty: {getPenaltyFromType(shot.penalty_type)}
+                  </div>
+                </div>
+              ))}
+            </div>
 
             <div style={styles.summaryBox}>
-              <p><strong>Shots entered:</strong> {shotTotals.shotCount}</p>
-              <p><strong>Auto penalties:</strong> {shotTotals.autoPenalty}</p>
-              <p><strong>Calculated hole score:</strong> {shotTotals.totalScore}</p>
+              <div style={styles.summaryInline}>
+                <span>Shots entered</span>
+                <strong>{shotTotals.shotCount}</strong>
+              </div>
+              <div style={styles.summaryInline}>
+                <span>Auto penalties</span>
+                <strong>{shotTotals.autoPenalty}</strong>
+              </div>
+              <div style={styles.summaryInline}>
+                <span>Calculated score</span>
+                <strong>{shotTotals.totalScore}</strong>
+              </div>
             </div>
           </div>
         )}
 
-        <div style={styles.buttonRow}>
-          <button style={styles.primaryButton} onClick={saveHole} disabled={loading}>
-            {hole === 18 ? "Save Hole 18 & Finish" : "Save Hole"}
+        <div style={styles.stickyActionBar}>
+          <button style={styles.primaryAction} onClick={saveHole} disabled={loading}>
+            {hole === 18 ? "Save & Finish" : "Save Hole"}
           </button>
 
-          <button style={styles.secondaryButton} onClick={skipHole} disabled={loading}>
-            {hole === 18 ? "Skip Hole 18 & Finish" : "Skip Hole"}
-          </button>
+          <div style={styles.secondaryActionsRow}>
+            <button style={styles.secondaryAction} onClick={skipHole} disabled={loading}>
+              Skip Hole
+            </button>
+            <button style={styles.dangerAction} onClick={endRoundNow} disabled={loading}>
+              End Round
+            </button>
+          </div>
 
-          <button style={styles.dangerButton} onClick={endRoundNow} disabled={loading}>
-            End Round Now
-          </button>
-
-          <button style={styles.secondaryButton} onClick={goHomeAndReset} disabled={loading}>
+          <button style={styles.ghostAction} onClick={goHomeAndReset} disabled={loading}>
             Cancel Round
           </button>
         </div>
       </div>
     </div>
+  )
+}
+
+function StatCard({ label, value }) {
+  return (
+    <div style={styles.statCard}>
+      <div style={styles.statValue}>{value}</div>
+      <div style={styles.statLabel}>{label}</div>
+    </div>
+  )
+}
+
+function SmallMetric({ label, value }) {
+  return (
+    <div style={styles.smallMetric}>
+      <div style={styles.smallMetricLabel}>{label}</div>
+      <div style={styles.smallMetricValue}>{value}</div>
+    </div>
+  )
+}
+
+function ToggleCard({ label, value, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        ...styles.toggleCard,
+        ...(value ? styles.toggleCardActive : {}),
+      }}
+    >
+      <div style={styles.toggleCardLabel}>{label}</div>
+      <div style={styles.toggleCardValue}>{value ? "Yes" : "No"}</div>
+    </button>
   )
 }
 
@@ -929,14 +924,10 @@ function buildSummary(holes) {
       : "0.0"
 
   const relativeToPar = totalScore - totalPar
-  const relativeToParText =
-    relativeToPar > 0 ? `+${relativeToPar}` : `${relativeToPar}`
+  const relativeToParText = relativeToPar > 0 ? `+${relativeToPar}` : `${relativeToPar}`
 
   const avgScorePerPlayedHole =
     playedHoles.length > 0 ? (totalScore / playedHoles.length).toFixed(2) : "0.00"
-
-  const shotByShotCount = playedHoles.filter((h) => h.entry_mode === "shot_by_shot").length
-  const scoreModeCount = playedHoles.filter((h) => h.entry_mode === "score").length
 
   return {
     playedCount: playedHoles.length,
@@ -950,8 +941,6 @@ function buildSummary(holes) {
     fairwayPct,
     relativeToParText,
     avgScorePerPlayedHole,
-    shotByShotCount,
-    scoreModeCount,
   }
 }
 
@@ -970,154 +959,391 @@ function formatToPar(score, par) {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "#f3f4f6",
-    padding: "20px",
-    fontFamily: "Arial, sans-serif",
+    background: "#eef2f7",
+    padding: "12px",
+    fontFamily: "Inter, Arial, sans-serif",
+    color: "#111827",
   },
-  cardWide: {
-    maxWidth: "1200px",
+  mobileShell: {
+    maxWidth: "680px",
     margin: "0 auto",
-    background: "#ffffff",
-    padding: "24px",
-    borderRadius: "16px",
-    boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    paddingBottom: "120px",
   },
-  title: {
-    marginTop: 0,
-    marginBottom: "20px",
+  heroCard: {
+    background: "linear-gradient(180deg, #1d4ed8 0%, #2563eb 100%)",
+    color: "white",
+    padding: "18px",
+    borderRadius: "20px",
+    boxShadow: "0 10px 24px rgba(37,99,235,0.22)",
   },
-  roundInfo: {
-    margin: "8px 0",
+  heroTitle: {
+    margin: 0,
+    fontSize: "28px",
+    lineHeight: 1.1,
+  },
+  heroText: {
+    marginTop: "6px",
+    marginBottom: "18px",
+    opacity: 0.9,
+  },
+  sectionCard: {
+    background: "white",
+    padding: "16px",
+    borderRadius: "18px",
+    boxShadow: "0 8px 20px rgba(0,0,0,0.06)",
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: "20px",
+  },
+  sectionHeaderRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "10px",
+  },
+  mutedText: {
+    color: "#6b7280",
+    marginTop: "8px",
+    marginBottom: 0,
   },
   label: {
     display: "block",
-    marginTop: "14px",
+    marginTop: "12px",
     marginBottom: "6px",
-    fontWeight: "bold",
+    fontWeight: 700,
+    fontSize: "14px",
   },
   input: {
     width: "100%",
-    padding: "12px",
+    minHeight: "48px",
+    padding: "12px 14px",
     fontSize: "16px",
-    borderRadius: "10px",
+    borderRadius: "14px",
     border: "1px solid #d1d5db",
     boxSizing: "border-box",
+    background: "white",
   },
-  tableInput: {
+  primaryButton: {
+    marginTop: "16px",
     width: "100%",
-    minWidth: "110px",
-    padding: "8px",
-    fontSize: "14px",
-    borderRadius: "8px",
-    border: "1px solid #d1d5db",
-    boxSizing: "border-box",
+    minHeight: "50px",
+    border: "none",
+    borderRadius: "16px",
+    fontSize: "16px",
+    fontWeight: 700,
+    background: "#2563eb",
+    color: "white",
+    cursor: "pointer",
   },
-  checkboxRow: {
+  roundList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    marginTop: "8px",
+  },
+  roundListItem: {
+    width: "100%",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "16px",
+    padding: "14px",
     display: "flex",
     alignItems: "center",
-    gap: "10px",
-    marginTop: "16px",
-  },
-  buttonRow: {
-    display: "flex",
-    gap: "12px",
-    marginTop: "20px",
-    flexWrap: "wrap",
-  },
-  modeRow: {
-    display: "flex",
-    gap: "12px",
-    flexWrap: "wrap",
-    marginTop: "10px",
-    marginBottom: "16px",
-  },
-  modeButton: {
-    padding: "12px 16px",
-    fontSize: "16px",
-    borderRadius: "10px",
-    border: "1px solid #9ca3af",
+    justifyContent: "space-between",
+    textAlign: "left",
     cursor: "pointer",
-    background: "white",
-    color: "#111827",
   },
-  modeButtonActive: {
+  roundCourse: {
+    fontWeight: 700,
+    fontSize: "16px",
+  },
+  roundDate: {
+    color: "#6b7280",
+    fontSize: "14px",
+    marginTop: "3px",
+  },
+  roundChevron: {
+    fontSize: "28px",
+    color: "#9ca3af",
+    lineHeight: 1,
+  },
+  playHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "12px",
+  },
+  playCourse: {
+    fontSize: "20px",
+    fontWeight: 800,
+  },
+  playDate: {
+    color: "#6b7280",
+    marginTop: "4px",
+    fontSize: "14px",
+  },
+  holeCounter: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontWeight: 700,
+    fontSize: "14px",
+    whiteSpace: "nowrap",
+  },
+  segmentedWrap: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
+    marginTop: "8px",
+  },
+  segmentedButton: {
+    minHeight: "48px",
+    borderRadius: "14px",
+    border: "1px solid #d1d5db",
+    background: "white",
+    fontSize: "15px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  segmentedActive: {
     background: "#2563eb",
     color: "white",
     border: "1px solid #2563eb",
   },
-  primaryButton: {
-    marginTop: "20px",
-    padding: "12px 16px",
-    fontSize: "16px",
-    borderRadius: "10px",
-    border: "none",
-    cursor: "pointer",
-    background: "#2563eb",
-    color: "white",
+  twoColGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "10px",
   },
-  secondaryButton: {
-    marginTop: "20px",
-    padding: "12px 16px",
-    fontSize: "16px",
-    borderRadius: "10px",
-    border: "1px solid #9ca3af",
-    cursor: "pointer",
+  toggleCard: {
+    width: "100%",
+    marginTop: "12px",
+    minHeight: "84px",
+    borderRadius: "16px",
+    border: "1px solid #d1d5db",
     background: "white",
-    color: "#111827",
-  },
-  dangerButton: {
-    marginTop: "20px",
-    padding: "12px 16px",
-    fontSize: "16px",
-    borderRadius: "10px",
-    border: "none",
+    padding: "14px",
     cursor: "pointer",
-    background: "#dc2626",
-    color: "white",
+    textAlign: "left",
   },
-  smallButton: {
-    padding: "6px 10px",
-    fontSize: "12px",
-    borderRadius: "8px",
-    border: "1px solid #9ca3af",
-    cursor: "pointer",
-    background: "white",
+  toggleCardActive: {
+    background: "#eff6ff",
+    border: "1px solid #60a5fa",
   },
-  sectionBox: {
-    marginTop: "18px",
-    padding: "18px",
+  toggleCardLabel: {
+    fontSize: "14px",
+    color: "#6b7280",
+  },
+  toggleCardValue: {
+    marginTop: "10px",
+    fontSize: "22px",
+    fontWeight: 800,
+  },
+  shotCardList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    marginTop: "8px",
+  },
+  shotCard: {
     border: "1px solid #e5e7eb",
-    borderRadius: "14px",
+    borderRadius: "18px",
+    padding: "14px",
     background: "#fafafa",
   },
-  sectionTitle: {
-    marginTop: 0,
-    marginBottom: "12px",
+  shotCardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+  },
+  shotNumber: {
+    fontWeight: 800,
+    fontSize: "17px",
+  },
+  removeGhostButton: {
+    border: "none",
+    background: "transparent",
+    color: "#dc2626",
+    fontWeight: 700,
+    cursor: "pointer",
+    fontSize: "14px",
+  },
+  shotPenaltyInfo: {
+    marginTop: "12px",
+    fontSize: "14px",
+    color: "#374151",
+    background: "#f3f4f6",
+    padding: "10px 12px",
+    borderRadius: "12px",
   },
   summaryBox: {
-    marginTop: "18px",
-    padding: "14px",
-    borderRadius: "12px",
+    marginTop: "14px",
     background: "#eff6ff",
     border: "1px solid #bfdbfe",
+    borderRadius: "16px",
+    padding: "14px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
   },
-  table: {
+  summaryInline: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    fontSize: "15px",
+  },
+  stickyActionBar: {
+    position: "sticky",
+    bottom: "10px",
+    background: "rgba(255,255,255,0.96)",
+    backdropFilter: "blur(8px)",
+    border: "1px solid #e5e7eb",
+    borderRadius: "20px",
+    padding: "12px",
+    boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
+  },
+  primaryAction: {
     width: "100%",
-    borderCollapse: "collapse",
-    marginTop: "12px",
+    minHeight: "52px",
+    border: "none",
+    borderRadius: "16px",
+    fontSize: "17px",
+    fontWeight: 800,
+    background: "#2563eb",
+    color: "white",
+    cursor: "pointer",
   },
-  th: {
-    textAlign: "left",
-    borderBottom: "1px solid #d1d5db",
-    padding: "8px",
-    fontSize: "14px",
+  secondaryActionsRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "10px",
+    marginTop: "10px",
+  },
+  secondaryAction: {
+    minHeight: "48px",
+    borderRadius: "14px",
+    border: "1px solid #d1d5db",
+    background: "white",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  dangerAction: {
+    minHeight: "48px",
+    borderRadius: "14px",
+    border: "none",
+    background: "#dc2626",
+    color: "white",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  ghostAction: {
+    marginTop: "10px",
+    width: "100%",
+    minHeight: "44px",
+    borderRadius: "14px",
+    border: "1px solid #e5e7eb",
+    background: "#f9fafb",
+    color: "#374151",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+  smallButton: {
+    minHeight: "38px",
+    padding: "0 12px",
+    borderRadius: "12px",
+    border: "1px solid #d1d5db",
+    background: "white",
+    fontWeight: 700,
+    cursor: "pointer",
     whiteSpace: "nowrap",
   },
-  td: {
-    borderBottom: "1px solid #e5e7eb",
-    padding: "8px",
-    fontSize: "14px",
-    verticalAlign: "top",
+  statsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "10px",
+    marginTop: "14px",
+  },
+  statCard: {
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "16px",
+    padding: "14px",
+  },
+  statValue: {
+    fontSize: "24px",
+    fontWeight: 800,
+  },
+  statLabel: {
+    marginTop: "6px",
+    fontSize: "13px",
+    color: "#6b7280",
+  },
+  holeCardList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    marginTop: "12px",
+  },
+  holeCard: {
+    background: "#fafafa",
+    border: "1px solid #e5e7eb",
+    borderRadius: "16px",
+    padding: "14px",
+  },
+  holeCardTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "12px",
+  },
+  holeBadge: {
+    fontWeight: 800,
+    fontSize: "16px",
+  },
+  modePill: {
+    background: "#e5e7eb",
+    color: "#374151",
+    borderRadius: "999px",
+    padding: "6px 10px",
+    fontSize: "12px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+  },
+  holeStatRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "8px",
+  },
+  smallMetric: {
+    background: "white",
+    borderRadius: "12px",
+    padding: "10px",
+    border: "1px solid #e5e7eb",
+  },
+  smallMetricLabel: {
+    color: "#6b7280",
+    fontSize: "12px",
+  },
+  smallMetricValue: {
+    fontWeight: 800,
+    fontSize: "18px",
+    marginTop: "4px",
+  },
+  holeMetaRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "10px",
+    marginTop: "12px",
+    fontSize: "13px",
+    color: "#4b5563",
   },
 }
 
