@@ -22,6 +22,47 @@ export function makeShot(shotNumber) {
   }
 }
 
+export function getValidShots(shots) {
+  return shots.filter(
+    (s) =>
+      s.distance_to_flag !== null &&
+      s.distance_to_flag !== "" &&
+      Number.isFinite(Number(s.distance_to_flag))
+  )
+}
+
+export function calculateShotModeTotals(shots) {
+  const validShots = getValidShots(shots)
+  const shotCount = validShots.length
+  const autoPenalty = validShots.reduce(
+    (sum, shot) => sum + getPenaltyFromType(shot.penalty_type),
+    0
+  )
+
+  return {
+    shotCount,
+    autoPenalty,
+    totalScore: shotCount + autoPenalty,
+  }
+}
+
+export function inferHoleValuesFromShots(selectedPar, validShots) {
+  const firstPutt = validShots.find((s) => s.is_putt)
+  const secondShot = validShots[1]
+
+  const fairway =
+    selectedPar > 3 && secondShot ? !secondShot.is_putt && secondShot.lie === "Fairway" : null
+
+  const gir = firstPutt ? firstPutt.shot_number <= selectedPar - 1 : false
+  const putts = validShots.filter((s) => s.is_putt).length
+
+  return {
+    fairway,
+    gir,
+    putts,
+  }
+}
+
 export function groupShotsByHole(shots) {
   const grouped = {}
   for (const shot of shots) {

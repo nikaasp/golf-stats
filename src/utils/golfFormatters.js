@@ -1,3 +1,7 @@
+export function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value))
+}
+
 export function formatDistance(value) {
   return `${Number(value).toFixed(1)} m`
 }
@@ -17,8 +21,4 @@ export function scoreLabel(score, par) {
   if (diff === 0) return "Par"
   if (diff === 1) return "Bogey"
   return "Double+"
-}
-
-export function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value))
 }
