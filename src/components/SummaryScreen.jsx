@@ -10,6 +10,13 @@ export default function SummaryScreen({
   goHomeAndReset,
   styles,
 }) {
+  const formatStrokesGained = (value) => {
+    if (value === null || value === undefined || value === "") return "-"
+    const numericValue = Number(value)
+    if (!Number.isFinite(numericValue)) return "-"
+    return `${numericValue >= 0 ? "+" : ""}${numericValue.toFixed(2)}`
+  }
+
   const fwChart = [
     { label: "Hit", value: summary.fwHits, color: "#2563eb" },
     { label: "Miss", value: summary.fwMisses, color: "#cbd5e1" },
@@ -44,21 +51,41 @@ export default function SummaryScreen({
               value={formatToPar(summary.totalScore, summary.totalPar)}
               styles={styles}
             />
-            <StatCard label="Putts" value={summary.totalPutts} styles={styles} />
-            <StatCard label="Played" value={summary.playedCount} styles={styles} />
-            <StatCard
-              label="Avg Drive"
-              value={summary.avgDrive === "-" ? "-" : `${summary.avgDrive} m`}
-              styles={styles}
-            />
-            <StatCard
-              label="Avg Approach"
-              value={summary.avgApproach === "-" ? "-" : `${summary.avgApproach} m`}
-              styles={styles}
-            />
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <h2 style={styles.sectionTitle}>Avg Shots by Par</h2>
+          <div style={styles.statsGrid}>
             <StatCard label="Avg Par 3" value={summary.avgPar3} styles={styles} />
             <StatCard label="Avg Par 4" value={summary.avgPar4} styles={styles} />
             <StatCard label="Avg Par 5" value={summary.avgPar5} styles={styles} />
+          </div>
+        </div>
+
+        <div style={styles.sectionCard}>
+          <h2 style={styles.sectionTitle}>Strokes Gained</h2>
+          <div style={styles.statsGrid}>
+            <StatCard
+              label="Tee Shots"
+              value={formatStrokesGained(summary.sgTeeShots ?? summary.sgTeeShot ?? summary.sgTee)}
+              styles={styles}
+            />
+            <StatCard
+              label="Approach"
+              value={formatStrokesGained(summary.sgApproach)}
+              styles={styles}
+            />
+            <StatCard
+              label="Short Game"
+              value={formatStrokesGained(summary.sgShortGame)}
+              styles={styles}
+            />
+            <StatCard
+              label="Putting"
+              value={formatStrokesGained(summary.sgPutting)}
+              styles={styles}
+            />
           </div>
         </div>
 
