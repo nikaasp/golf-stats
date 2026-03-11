@@ -130,7 +130,7 @@ export const styles = {
     borderRadius: "16px",
     fontSize: "16px",
     fontWeight: 700,
-    background: "#dc2626",
+    background: "#d45555",
     color: "white",
     cursor: "pointer",
   },
