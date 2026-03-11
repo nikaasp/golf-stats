@@ -1,18 +1,17 @@
 export const styles = {
   page: {
-    minHeight: "100vh",
-    background: "#eef2f7",
-    padding: "12px",
-    fontFamily: "Inter, Arial, sans-serif",
-    color: "#111827",
+    minHeight: "100dvh",
+    display: "flex",
+    justifyContent: "center",
+    padding: "16px 12px 32px",
+    boxSizing: "border-box",
   },
   mobileShell: {
-    maxWidth: "430px",
-    margin: "0 auto",
+    width: "100%",
+    maxWidth: "420px",
     display: "flex",
     flexDirection: "column",
     gap: "12px",
-    paddingBottom: "120px",
   },
   heroCard: {
     background: "linear-gradient(180deg, #1d4ed8 0%, #2563eb 100%)",
