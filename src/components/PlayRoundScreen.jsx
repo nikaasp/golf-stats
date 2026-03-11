@@ -33,6 +33,52 @@ export default function PlayRoundScreen({
   loading,
   styles,
 }) {
+  const asNumber = (value, fallback) => {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : fallback
+  }
+
+  const scoreValue = score === "" ? asNumber(par, 0) : asNumber(score, asNumber(par, 0))
+  const puttsValue = putts === "" ? 2 : asNumber(putts, 2)
+  const penaltyValue = penalty === "" ? 0 : asNumber(penalty, 0)
+
+  const bumpValue = (setter, currentValue, delta, min = 0) => {
+    setter(String(Math.max(min, currentValue + delta)))
+  }
+
+  const renderStepper = (label, value, onDecrement, onIncrement) => (
+    <div>
+      <label style={styles.label}>{label}</label>
+      <div
+        style={{
+          ...styles.input,
+          minHeight: "56px",
+          display: "grid",
+          gridTemplateColumns: "52px 1fr 52px",
+          alignItems: "center",
+          gap: "8px",
+          padding: "6px",
+        }}
+      >
+        <button type="button" style={styles.parButton} onClick={onDecrement}>
+          -
+        </button>
+        <div
+          style={{
+            fontSize: "22px",
+            fontWeight: 800,
+            textAlign: "center",
+          }}
+        >
+          {value}
+        </div>
+        <button type="button" style={styles.parButton} onClick={onIncrement}>
+          +
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <div style={styles.page}>
       <div style={styles.mobileShell}>
@@ -92,27 +138,19 @@ export default function PlayRoundScreen({
           <div style={styles.sectionCard}>
             <h2 style={styles.sectionTitle}>Score Mode</h2>
 
-            <div style={styles.twoColGrid}>
-              <div>
-                <label style={styles.label}>Score</label>
-                <input
-                  style={styles.input}
-                  type="number"
-                  value={score}
-                  onChange={(e) => setScore(e.target.value)}
-                />
-              </div>
+            {renderStepper(
+              "Score",
+              scoreValue,
+              () => bumpValue(setScore, scoreValue, -1, 0),
+              () => bumpValue(setScore, scoreValue, 1, 0)
+            )}
 
-              <div>
-                <label style={styles.label}>Putts</label>
-                <input
-                  style={styles.input}
-                  type="number"
-                  value={putts}
-                  onChange={(e) => setPutts(e.target.value)}
-                />
-              </div>
-            </div>
+            {renderStepper(
+              "Putts",
+              puttsValue,
+              () => bumpValue(setPutts, puttsValue, -1, 0),
+              () => bumpValue(setPutts, puttsValue, 1, 0)
+            )}
 
             <div style={styles.twoColGrid}>
               <ToggleCard
@@ -129,13 +167,12 @@ export default function PlayRoundScreen({
               />
             </div>
 
-            <label style={styles.label}>Penalties</label>
-            <input
-              style={styles.input}
-              type="number"
-              value={penalty}
-              onChange={(e) => setPenalty(e.target.value)}
-            />
+            {renderStepper(
+              "Penalties",
+              penaltyValue,
+              () => bumpValue(setPenalty, penaltyValue, -1, 0),
+              () => bumpValue(setPenalty, penaltyValue, 1, 0)
+            )}
           </div>
         )}
 

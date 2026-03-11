@@ -227,23 +227,23 @@ function App() {
       return false
     }
 
-    if (score === "" || putts === "") {
-      alert("Please enter score and putts")
-      return false
-    }
+    const parValue = parseInt(par, 10)
+    const scoreValue = score === "" ? parValue : parseInt(score, 10)
+    const puttsValue = putts === "" ? 2 : parseInt(putts, 10)
+    const penaltyValue = penalty === "" ? 0 : parseInt(penalty, 10)
 
     setLoading(true)
 
     const { error } = await insertHole({
       round_id: roundId,
       hole_number: hole,
-      par: parseInt(par, 10),
+      par: parValue,
       entry_mode: "score",
-      score: parseInt(score, 10),
-      putts: parseInt(putts, 10),
+      score: scoreValue,
+      putts: puttsValue,
       fairway,
       gir,
-      penalty: parseInt(penalty || 0, 10),
+      penalty: penaltyValue,
       skipped: false,
     })
 
