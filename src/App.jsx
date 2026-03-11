@@ -7,6 +7,8 @@ import HomeScreen from "./components/HomeScreen"
 import PlayRoundScreen from "./components/PlayRoundScreen"
 import SummaryScreen from "./components/SummaryScreen"
 import ReviewRoundScreen from "./components/ReviewRoundScreen"
+import RoundsListScreen from "./components/RoundsListScreen"
+import AnalyticsScreen from "./components/AnalyticsScreen"
 
 import {
   createCourse,
@@ -736,9 +738,6 @@ const reviewSgSummary = useMemo(
         setCourse={setCourse}
         setDate={setDate}
         startRound={startRound}
-        reviewRounds={reviewRounds}
-        loadRoundDetailsForReview={loadRoundDetailsForReview}
-        deleteRound={deleteRound}
         loading={loading}
         styles={styles}
         session={session}
@@ -748,6 +747,31 @@ const reviewSgSummary = useMemo(
         setSelectedCourseId={setSelectedCourseId}
         isNewCourse={isNewCourse}
         setIsNewCourse={setIsNewCourse}
+        goToRounds={() => setScreen("rounds")}
+        goToAnalytics={() => setScreen("analytics")}
+      />
+    )
+  }
+
+  if (screen === "rounds") {
+    return (
+      <RoundsListScreen
+        reviewRounds={reviewRounds}
+        loadRoundDetailsForReview={loadRoundDetailsForReview}
+        deleteRound={deleteRound}
+        loading={loading}
+        goHome={() => setScreen("home")}
+        styles={styles}
+      />
+    )
+  }
+
+  if (screen === "analytics") {
+    return (
+      <AnalyticsScreen
+        courses={courses}
+        goHome={() => setScreen("home")}
+        styles={styles}
       />
     )
   }

@@ -4,9 +4,6 @@ export default function HomeScreen({
   setCourse,
   setDate,
   startRound,
-  reviewRounds,
-  loadRoundDetailsForReview,
-  deleteRound,
   loading,
   styles,
   courses,
@@ -14,6 +11,8 @@ export default function HomeScreen({
   setSelectedCourseId,
   isNewCourse,
   setIsNewCourse,
+  goToRounds,
+  goToAnalytics,
 }) {
   function handleCourseSelection(value) {
     if (value === "new") {
@@ -80,35 +79,15 @@ export default function HomeScreen({
         </div>
 
         <div style={styles.sectionCard}>
-          <h2 style={styles.sectionTitle}>Previous Rounds</h2>
+          <button style={styles.primaryButton} onClick={goToRounds}>
+            Rounds Played
+          </button>
 
-          {reviewRounds.length === 0 ? (
-            <p style={styles.mutedText}>No saved rounds yet.</p>
-          ) : (
-            <div style={styles.roundList}>
-              {reviewRounds.map((r) => (
-                <div key={r.id} style={styles.roundListItem}>
-                  <button
-                    style={styles.roundMainButton}
-                    onClick={() => loadRoundDetailsForReview(r)}
-                  >
-                    <div>
-                      <div style={styles.roundCourse}>{r.course || "Untitled round"}</div>
-                      <div style={styles.roundDate}>{r.date || "-"}</div>
-                    </div>
-                    <div style={styles.roundChevron}>›</div>
-                  </button>
-                  <button
-                    style={styles.deleteRoundButton}
-                    onClick={() => deleteRound(r)}
-                    disabled={loading}
-                  >
-                    Delete
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <div style={{ height: 10 }} />
+
+          <button style={styles.primaryButton} onClick={goToAnalytics}>
+            Analytics
+          </button>
         </div>
       </div>
     </div>
