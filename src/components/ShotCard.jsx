@@ -1,6 +1,17 @@
 import DistancePicker from "./DistancePicker"
-import { CLUB_OPTIONS, LIE_OPTIONS, PENALTY_TYPE_OPTIONS, SHOT_RESULT_OPTIONS } from "../utils/constants"
 import { getPenaltyFromType } from "../utils/analytics"
+
+const SHOT_CATEGORIES = ["Tee Shot", "Approach shot", "Short Game", "Putting"]
+const CONTACT_GRID = [
+  ["Hook", "Top", "Slice"],
+  [null, "Pured", null],
+  ["Pull", "Duff", "Push"],
+]
+const PENALTY_OPTIONS = [
+  { value: "None", label: "None" },
+  { value: "Hazard", label: "Hazard (+1)" },
+  { value: "OB", label: "OB (+2)" },
+]
 
 export default function ShotCard({
   shot,
@@ -21,31 +32,42 @@ export default function ShotCard({
     >
       <div style={styles.shotCardHeader}>
         <div style={styles.shotNumber}>Shot {index + 1}</div>
-        <div style={styles.puttToggleRow}>
+        <button
+          type="button"
+          style={styles.removeGhostButton}
+          onClick={(e) => {
+            e.stopPropagation()
+            removeShotCard(index)
+          }}
+        >
+          Remove
+        </button>
+      </div>
+
+      <label style={styles.label}>Shot category</label>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "8px",
+        }}
+      >
+        {SHOT_CATEGORIES.map((category) => (
           <button
+            key={category}
             type="button"
             style={{
-              ...styles.puttToggle,
-              ...(shot.is_putt ? styles.puttToggleActive : {}),
+              ...styles.segmentedButton,
+              ...(shot.shot_category === category ? styles.segmentedActive : {}),
             }}
             onClick={(e) => {
               e.stopPropagation()
-              updateShot(index, "is_putt", !shot.is_putt)
+              updateShot(index, "shot_category", category)
             }}
           >
-            {shot.is_putt ? "Putting" : "Mark as Putt"}
+            {category}
           </button>
-          <button
-            type="button"
-            style={styles.removeGhostButton}
-            onClick={(e) => {
-              e.stopPropagation()
-              removeShotCard(index)
-            }}
-          >
-            Remove
-          </button>
-        </div>
+        ))}
       </div>
 
       <label style={styles.label}>Distance to hole</label>
@@ -55,72 +77,67 @@ export default function ShotCard({
         styles={styles}
       />
 
-      {!shot.is_putt && (
-        <>
-          <label style={styles.label}>Lie</label>
-          <select
-            style={styles.input}
-            value={shot.lie}
-            onChange={(e) => updateShot(index, "lie", e.target.value)}
+      <label style={styles.label}>Club contact</label>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: "8px",
+        }}
+      >
+        {CONTACT_GRID.flat().map((option, indexInGrid) => {
+          if (!option) {
+            return <div key={`blank-${indexInGrid}`} aria-hidden="true" />
+          }
+
+          return (
+            <button
+              key={option}
+              type="button"
+              style={{
+                ...styles.segmentedButton,
+                ...(shot.shot_result === option ? styles.segmentedActive : {}),
+              }}
+              onClick={(e) => {
+                e.stopPropagation()
+                updateShot(index, "shot_result", option)
+              }}
+            >
+              {option}
+            </button>
+          )
+        })}
+      </div>
+
+      <label style={styles.label}>Penalty result</label>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: "8px",
+        }}
+      >
+        {PENALTY_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            style={{
+              ...styles.segmentedButton,
+              ...(shot.penalty_type === option.value ? styles.segmentedActive : {}),
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              updateShot(index, "penalty_type", option.value)
+            }}
           >
-            {LIE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+            {option.label}
+          </button>
+        ))}
+      </div>
 
-          <label style={styles.label}>Club (optional)</label>
-          <select
-            style={styles.input}
-            value={shot.club}
-            onChange={(e) => updateShot(index, "club", e.target.value)}
-          >
-            <option value="">No club logged</option>
-            {CLUB_OPTIONS.map((club) => (
-              <option key={club} value={club}>
-                {club}
-              </option>
-            ))}
-          </select>
-
-          <label style={styles.label}>Ball-club contact</label>
-          <select
-            style={styles.input}
-            value={shot.shot_result}
-            onChange={(e) => updateShot(index, "shot_result", e.target.value)}
-          >
-            {SHOT_RESULT_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-
-          <label style={styles.label}>Penalty result</label>
-          <select
-            style={styles.input}
-            value={shot.penalty_type}
-            onChange={(e) => updateShot(index, "penalty_type", e.target.value)}
-          >
-            {PENALTY_TYPE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-
-          <div style={styles.shotPenaltyInfo}>
-            Auto penalty: {getPenaltyFromType(shot.penalty_type)}
-          </div>
-        </>
-      )}
-
-      {shot.is_putt && (
-        <div style={styles.puttInfoBox}>
-          Putting shot: only distance to hole is required.
-        </div>
-      )}
+      <div style={styles.shotPenaltyInfo}>
+        Auto penalty: {getPenaltyFromType(shot.penalty_type)}
+      </div>
     </div>
   )
 }

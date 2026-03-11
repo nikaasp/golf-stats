@@ -14,9 +14,9 @@ export function makeShot(shotNumber) {
   return {
     shot_number: shotNumber,
     is_putt: false,
+    shot_category: "Tee Shot",
     lie: getDefaultLieForShot(shotNumber),
     distance_to_flag: 100,
-    club: "",
     shot_result: "Pured",
     penalty_type: "None",
   }

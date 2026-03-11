@@ -171,7 +171,6 @@ function App() {
           return {
             ...updated,
             lie: "Green",
-            club: "",
             shot_result: "Pured",
             penalty_type: "None",
           }
@@ -181,6 +180,15 @@ function App() {
           return {
             ...updated,
             lie: getDefaultLieForShot(index + 1),
+          }
+        }
+
+        if (field === "shot_category") {
+          const isPutting = value === "Putting"
+          return {
+            ...updated,
+            is_putt: isPutting,
+            lie: isPutting ? "Green" : getDefaultLieForShot(index + 1),
           }
         }
 
@@ -301,10 +309,9 @@ function App() {
       shot_number: index + 1,
       lie: shot.is_putt ? "Green" : shot.lie,
       distance_to_flag: Number(shot.distance_to_flag),
-      club: shot.is_putt ? null : shot.club || null,
       shot_result: shot.is_putt ? null : shot.shot_result || null,
-      penalty_type: shot.is_putt ? "None" : shot.penalty_type || "None",
-      auto_penalty: shot.is_putt ? 0 : getPenaltyFromType(shot.penalty_type),
+      penalty_type: shot.penalty_type || "None",
+      auto_penalty: getPenaltyFromType(shot.penalty_type),
       is_putt: shot.is_putt,
     }))
 
