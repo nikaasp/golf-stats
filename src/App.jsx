@@ -8,6 +8,13 @@ import PlayRoundScreen from "./components/PlayRoundScreen"
 import SummaryScreen from "./components/SummaryScreen"
 import ReviewRoundScreen from "./components/ReviewRoundScreen"
 
+import {
+  createCourse,
+  fetchCourses,
+  updateCourseLastPlayed,
+  updateRoundCourse,
+} from "./services/coursesService"
+
 import { styles } from "./utils/styles"
 import {
   buildRoundAnalytics,
@@ -60,6 +67,12 @@ function App() {
   const [shots, setShots] = useState([makeShot(1)])
   const [activeShotIndex, setActiveShotIndex] = useState(0)
 
+  const [courses, setCourses] = useState([])
+  const [selectedCourseId, setSelectedCourseId] = useState("")
+  const [selectedCourseData, setSelectedCourseData] = useState(null)
+  const [isNewCourse, setIsNewCourse] = useState(true)
+  const [newCoursePars, setNewCoursePars] = useState([])
+
   useEffect(() => {
     let mounted = true
 
@@ -97,8 +110,32 @@ function App() {
   useEffect(() => {
     if (session && screen === "home") {
       loadRounds()
+      loadCourses()
     }
   }, [screen, session])
+
+  useEffect(() => {
+    if (!selectedCourseId || selectedCourseId === "new") {
+      setSelectedCourseData(null)
+      return
+    }
+
+    const selected = courses.find((c) => c.id === selectedCourseId) || null
+    setSelectedCourseData(selected)
+  }, [selectedCourseId, courses])
+
+  useEffect(() => {
+    if (screen !== "play") return
+    if (isNewCourse) return
+    if (!selectedCourseData?.hole_pars?.length) return
+
+    const holeData = selectedCourseData.hole_pars.find((h) => h.hole === hole)
+    if (holeData) {
+      setPar(String(holeData.par))
+    } else {
+      setPar("")
+    }
+  }, [hole, screen, isNewCourse, selectedCourseData])
 
   async function loadRounds() {
     const { data, error } = await fetchRounds()
@@ -107,6 +144,15 @@ function App() {
       return
     }
     setReviewRounds(data || [])
+  }
+
+  async function loadCourses() {
+    const { data, error } = await fetchCourses()
+    if (error) {
+      alert("Could not load courses: " + error.message)
+      return
+    }
+    setCourses(data || [])
   }
 
   async function loadRoundDetailsForReview(round) {
@@ -130,9 +176,16 @@ function App() {
   }
 
   async function startRound() {
-    if (!course.trim()) {
-      alert("Please enter a course name")
-      return
+    if (isNewCourse) {
+      if (!course.trim()) {
+        alert("Please enter a course name")
+        return
+      }
+    } else {
+      if (!selectedCourseData) {
+        alert("Please select a saved course")
+        return
+      }
     }
 
     if (!session?.user) {
@@ -140,11 +193,15 @@ function App() {
       return
     }
 
+    const courseName = isNewCourse ? course.trim() : selectedCourseData.name
+    const courseId = isNewCourse ? null : selectedCourseData.id
+
     setLoading(true)
     const { data, error } = await createRound({
       user_id: session.user.id,
       date,
-      course: course.trim(),
+      course: courseName,
+      course_id: courseId,
     })
     setLoading(false)
 
@@ -153,11 +210,27 @@ function App() {
       return
     }
 
+    if (!isNewCourse && courseId) {
+      await updateCourseLastPlayed(courseId)
+    }
+
     setRoundId(data[0].id)
+    setCourse(courseName)
     setHole(1)
-    resetHoleInputs()
+    setNewCoursePars([])
     setHolesData([])
     setRoundShots([])
+
+    if (!isNewCourse && selectedCourseData?.hole_pars?.length) {
+      const hole1 = selectedCourseData.hole_pars.find((h) => h.hole === 1)
+      setPar(hole1 ? String(hole1.par) : "")
+    } else {
+      setPar("")
+    }
+
+    setEntryMode("")
+    resetScoreInputs()
+    resetShotInputs()
     setScreen("play")
   }
 
@@ -246,6 +319,21 @@ function App() {
   }
 
   async function finishRound() {
+    if (isNewCourse && session?.user && course.trim() && newCoursePars.length > 0) {
+      const { data: courseData, error: courseError } = await createCourse({
+        user_id: session.user.id,
+        name: course.trim(),
+        hole_pars: newCoursePars,
+        last_played_at: new Date().toISOString(),
+      })
+
+      if (courseError) {
+        alert("Round saved, but course could not be created: " + courseError.message)
+      } else if (courseData?.[0]?.id && roundId) {
+        await updateRoundCourse(roundId, courseData[0].id)
+      }
+    }
+
     const bundle = await fetchRoundBundle(roundId)
 
     if (bundle.holesRes.error) {
@@ -277,6 +365,13 @@ function App() {
     const scoreValue = score === "" ? parValue : parseInt(score, 10)
     const puttsValue = putts === "" ? 2 : parseInt(putts, 10)
     const penaltyValue = penalty === "" ? 0 : parseInt(penalty, 10)
+
+    if (isNewCourse) {
+      setNewCoursePars((prev) => {
+        const filtered = prev.filter((h) => h.hole !== hole)
+        return [...filtered, { hole, par: parValue }].sort((a, b) => a.hole - b.hole)
+      })
+    }
 
     setLoading(true)
 
@@ -321,6 +416,13 @@ function App() {
     if (validShots.length === 0) {
       alert("Please log at least one shot with distance to hole")
       return false
+    }
+
+    if (isNewCourse) {
+      setNewCoursePars((prev) => {
+        const filtered = prev.filter((h) => h.hole !== hole)
+        return [...filtered, { hole, par: selectedPar }].sort((a, b) => a.hole - b.hole)
+      })
     }
 
     const totals = calculateShotModeTotals(shots)
@@ -503,6 +605,7 @@ function App() {
     }
 
     await loadRounds()
+    await loadCourses()
   }
 
   async function signOut() {
@@ -528,6 +631,10 @@ function App() {
     setSelectedReviewRound(null)
     setSelectedReviewHoles([])
     setSelectedReviewShots([])
+    setSelectedCourseId("")
+    setSelectedCourseData(null)
+    setIsNewCourse(true)
+    setNewCoursePars([])
     resetHoleInputs()
   }
 
@@ -570,6 +677,11 @@ function App() {
         styles={styles}
         session={session}
         signOut={signOut}
+        courses={courses}
+        selectedCourseId={selectedCourseId}
+        setSelectedCourseId={setSelectedCourseId}
+        isNewCourse={isNewCourse}
+        setIsNewCourse={setIsNewCourse}
       />
     )
   }

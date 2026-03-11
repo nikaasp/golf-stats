@@ -1,9 +1,9 @@
 import { supabase } from "../supabase"
 
-export async function createRound({ user_id, date, course }) {
+export async function createRound({ user_id, date, course, course_id = null }) {
   return supabase
     .from("rounds")
-    .insert([{ user_id, date, course }])
+    .insert([{ user_id, date, course, course_id }])
     .select()
 }
 
@@ -21,7 +21,6 @@ export async function fetchRoundBundle(roundId) {
       .select("*")
       .eq("round_id", roundId)
       .order("hole_number", { ascending: true }),
-
     supabase
       .from("shots")
       .select("*")
