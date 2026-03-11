@@ -5,5 +5,5 @@ export async function insertHole(holeData) {
 }
 
 export async function insertSkippedHole(holeData) {
-  return supabase.from("holes").insert(holeData)
+  return supabase.from("holes").insert(holeData).select()
 }

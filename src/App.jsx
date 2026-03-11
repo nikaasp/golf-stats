@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 
+import { supabase } from "./supabase"
+
+import AuthScreen from "./components/AuthScreen"
 import HomeScreen from "./components/HomeScreen"
 import PlayRoundScreen from "./components/PlayRoundScreen"
 import SummaryScreen from "./components/SummaryScreen"
@@ -26,6 +29,9 @@ import { insertHole, insertSkippedHole } from "./services/holesService"
 import { insertShots } from "./services/shotsService"
 
 function App() {
+  const [session, setSession] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+
   const [screen, setScreen] = useState("home")
   const [loading, setLoading] = useState(false)
 
@@ -55,10 +61,44 @@ function App() {
   const [activeShotIndex, setActiveShotIndex] = useState(0)
 
   useEffect(() => {
-    if (screen === "home") {
+    let mounted = true
+
+    async function loadSession() {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession()
+
+      if (error) {
+        console.error("Error loading session:", error.message)
+      }
+
+      if (mounted) {
+        setSession(session ?? null)
+        setAuthLoading(false)
+      }
+    }
+
+    loadSession()
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session ?? null)
+      setAuthLoading(false)
+    })
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (session && screen === "home") {
       loadRounds()
     }
-  }, [screen])
+  }, [screen, session])
 
   async function loadRounds() {
     const { data, error } = await fetchRounds()
@@ -95,8 +135,14 @@ function App() {
       return
     }
 
+    if (!session?.user) {
+      alert("Please log in first")
+      return
+    }
+
     setLoading(true)
     const { data, error } = await createRound({
+      user_id: session.user.id,
       date,
       course: course.trim(),
     })
@@ -235,6 +281,7 @@ function App() {
     setLoading(true)
 
     const { error } = await insertHole({
+      user_id: session.user.id,
       round_id: roundId,
       hole_number: hole,
       par: parValue,
@@ -282,6 +329,7 @@ function App() {
     setLoading(true)
 
     const { data, error } = await insertHole({
+      user_id: session.user.id,
       round_id: roundId,
       hole_number: hole,
       par: selectedPar,
@@ -303,6 +351,7 @@ function App() {
     const newHoleId = data[0].id
 
     const shotRows = validShots.map((shot, index) => ({
+      user_id: session.user.id,
       round_id: roundId,
       hole_id: newHoleId,
       hole_number: hole,
@@ -361,6 +410,7 @@ function App() {
     setLoading(true)
 
     const { error } = await insertSkippedHole({
+      user_id: session.user.id,
       round_id: roundId,
       hole_number: hole,
       par: null,
@@ -455,6 +505,17 @@ function App() {
     await loadRounds()
   }
 
+  async function signOut() {
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      alert("Could not sign out: " + error.message)
+      return
+    }
+
+    setSession(null)
+    goHomeAndReset()
+  }
+
   function goHomeAndReset() {
     setScreen("home")
     setRoundId(null)
@@ -463,6 +524,7 @@ function App() {
     setDate(new Date().toISOString().slice(0, 10))
     setHolesData([])
     setRoundShots([])
+    setReviewRounds([])
     setSelectedReviewRound(null)
     setSelectedReviewHoles([])
     setSelectedReviewShots([])
@@ -481,6 +543,18 @@ function App() {
 
   const shotTotals = useMemo(() => calculateShotModeTotals(shots), [shots])
 
+  if (authLoading) {
+    return (
+      <div style={{ padding: 40, fontFamily: "system-ui, sans-serif" }}>
+        Loading...
+      </div>
+    )
+  }
+
+  if (!session) {
+    return <AuthScreen />
+  }
+
   if (screen === "home") {
     return (
       <HomeScreen
@@ -494,6 +568,8 @@ function App() {
         deleteRound={deleteRound}
         loading={loading}
         styles={styles}
+        session={session}
+        signOut={signOut}
       />
     )
   }

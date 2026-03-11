@@ -1,11 +1,17 @@
 import { supabase } from "../supabase"
 
-export async function createRound({ date, course }) {
-  return supabase.from("rounds").insert({ date, course }).select()
+export async function createRound({ user_id, date, course }) {
+  return supabase
+    .from("rounds")
+    .insert([{ user_id, date, course }])
+    .select()
 }
 
 export async function fetchRounds() {
-  return supabase.from("rounds").select("*").order("date", { ascending: false })
+  return supabase
+    .from("rounds")
+    .select("*")
+    .order("date", { ascending: false })
 }
 
 export async function fetchRoundBundle(roundId) {
@@ -15,6 +21,7 @@ export async function fetchRoundBundle(roundId) {
       .select("*")
       .eq("round_id", roundId)
       .order("hole_number", { ascending: true }),
+
     supabase
       .from("shots")
       .select("*")
