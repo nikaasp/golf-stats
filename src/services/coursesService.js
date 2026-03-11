@@ -27,3 +27,20 @@ export async function updateRoundCourse(roundId, courseId) {
     .eq("id", roundId)
     .select()
 }
+
+export async function findCourseByName(userId, courseName) {
+  return supabase
+    .from("courses")
+    .select("*")
+    .eq("user_id", userId)
+    .ilike("name", courseName.trim())
+    .limit(1)
+}
+
+export async function updateCourseById(courseId, updates) {
+  return supabase
+    .from("courses")
+    .update(updates)
+    .eq("id", courseId)
+    .select()
+}

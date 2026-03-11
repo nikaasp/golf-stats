@@ -11,6 +11,8 @@ import ReviewRoundScreen from "./components/ReviewRoundScreen"
 import {
   createCourse,
   fetchCourses,
+  findCourseByName,
+  updateCourseById,
   updateCourseLastPlayed,
   updateRoundCourse,
 } from "./services/coursesService"
@@ -318,36 +320,62 @@ function App() {
     setActiveShotIndex(index)
   }
 
-  async function finishRound() {
-    if (isNewCourse && session?.user && course.trim() && newCoursePars.length > 0) {
-      const { data: courseData, error: courseError } = await createCourse({
-        user_id: session.user.id,
-        name: course.trim(),
-        hole_pars: newCoursePars,
-        last_played_at: new Date().toISOString(),
-      })
+  async function finishRound(finalCoursePars = null) {
+  const parsToSave = finalCoursePars || newCoursePars
 
-      if (courseError) {
-        alert("Round saved, but course could not be created: " + courseError.message)
-      } else if (courseData?.[0]?.id && roundId) {
-        await updateRoundCourse(roundId, courseData[0].id)
+  if (isNewCourse && session?.user && course.trim() && parsToSave.length > 0) {
+    const normalizedName = course.trim()
+
+    const existingCourseRes = await findCourseByName(session.user.id, normalizedName)
+
+    if (existingCourseRes.error) {
+      alert("Round saved, but course lookup failed: " + existingCourseRes.error.message)
+    } else {
+      const existingCourse = existingCourseRes.data?.[0]
+
+      if (existingCourse) {
+        const updateRes = await updateCourseById(existingCourse.id, {
+          name: normalizedName,
+          hole_pars: parsToSave,
+          last_played_at: new Date().toISOString(),
+        })
+
+        if (updateRes.error) {
+          alert("Round saved, but existing course could not be updated: " + updateRes.error.message)
+        } else if (roundId) {
+          await updateRoundCourse(roundId, existingCourse.id)
+        }
+      } else {
+        const { data: courseData, error: courseError } = await createCourse({
+          user_id: session.user.id,
+          name: normalizedName,
+          hole_pars: parsToSave,
+          last_played_at: new Date().toISOString(),
+        })
+
+        if (courseError) {
+          alert("Round saved, but course could not be created: " + courseError.message)
+        } else if (courseData?.[0]?.id && roundId) {
+          await updateRoundCourse(roundId, courseData[0].id)
+        }
       }
     }
+  }
 
-    const bundle = await fetchRoundBundle(roundId)
+  const bundle = await fetchRoundBundle(roundId)
 
-    if (bundle.holesRes.error) {
-      alert("Could not load holes: " + bundle.holesRes.error.message)
-      return
-    }
-    if (bundle.shotsRes.error) {
-      alert("Could not load shots: " + bundle.shotsRes.error.message)
-      return
-    }
+  if (bundle.holesRes.error) {
+    alert("Could not load holes: " + bundle.holesRes.error.message)
+    return
+  }
+  if (bundle.shotsRes.error) {
+    alert("Could not load shots: " + bundle.shotsRes.error.message)
+    return
+  }
 
-    setHolesData(bundle.holesRes.data || [])
-    setRoundShots(bundle.shotsRes.data || [])
-    setScreen("summary")
+  setHolesData(bundle.holesRes.data || [])
+  setRoundShots(bundle.shotsRes.data || [])
+  setScreen("summary")
   }
 
   async function saveScoreHole() {
@@ -479,25 +507,41 @@ function App() {
   }
 
   async function saveHole() {
-    if (!entryMode) {
-      alert('Please choose either "Shot by shot" or "Score"')
-      return
-    }
+  if (!entryMode) {
+    alert('Please choose either "Shot by shot" or "Score"')
+    return
+  }
 
-    let ok = false
-    if (entryMode === "score") ok = await saveScoreHole()
-    if (entryMode === "shot_by_shot") ok = await saveShotByShotHole()
+  let ok = false
+  let parForThisHole = null
 
-    if (!ok) return
+  if (entryMode === "score") {
+    parForThisHole = par === "" ? null : parseInt(par, 10)
+    ok = await saveScoreHole()
+  }
 
-    if (hole >= 18) {
-      resetHoleInputs()
-      await finishRound()
-      return
-    }
+  if (entryMode === "shot_by_shot") {
+    parForThisHole = par === "" ? null : parseInt(par, 10)
+    ok = await saveShotByShotHole()
+  }
 
-    setHole(hole + 1)
+  if (!ok) return
+
+  const finalPars =
+    isNewCourse && parForThisHole !== null
+      ? [...newCoursePars.filter((h) => h.hole !== hole), { hole, par: parForThisHole }].sort(
+          (a, b) => a.hole - b.hole
+        )
+      : newCoursePars
+
+  if (hole >= 18) {
     resetHoleInputs()
+    await finishRound(finalPars)
+    return
+  }
+
+  setHole(hole + 1)
+  resetHoleInputs()   
   }
 
   async function skipHole() {
