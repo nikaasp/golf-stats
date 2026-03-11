@@ -216,7 +216,7 @@ export default function PlayRoundScreen({
           </div>
         )}
 
-        <div style={styles.stickyActionBar}>
+        <div style={styles.bottomActionBar}>
           <button style={styles.primaryAction} onClick={saveHole} disabled={loading}>
             {hole === 18 ? "Save & Finish" : "Save Hole"}
           </button>

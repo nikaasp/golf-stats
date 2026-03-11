@@ -368,15 +368,11 @@ export const styles = {
     gap: "12px",
     fontSize: "15px",
   },
-  stickyActionBar: {
-    position: "sticky",
-    bottom: "10px",
-    background: "rgba(255,255,255,0.96)",
-    backdropFilter: "blur(8px)",
-    border: "1px solid #e5e7eb",
-    borderRadius: "20px",
-    padding: "12px",
-    boxShadow: "0 10px 24px rgba(0,0,0,0.10)",
+  bottomActionBar: {
+  marginTop: 16,
+  display: "flex",
+  flexDirection: "column",
+  gap: 10,
   },
   primaryAction: {
     width: "100%",
