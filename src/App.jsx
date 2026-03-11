@@ -18,6 +18,12 @@ import {
 } from "./services/coursesService"
 
 import { styles } from "./utils/styles"
+
+import {
+  evaluateHoleStrokesGained,
+  summarizeRoundStrokesGained
+} from "./utils/strokesGained"
+
 import {
   buildRoundAnalytics,
   calculateShotModeTotals,
@@ -34,6 +40,7 @@ import {
   fetchRoundBundle,
   fetchRounds,
 } from "./services/roundsService"
+
 import { insertHole, insertSkippedHole } from "./services/holesService"
 import { insertShots } from "./services/shotsService"
 
@@ -455,6 +462,7 @@ function App() {
 
     const totals = calculateShotModeTotals(shots)
     const inferred = inferHoleValuesFromShots(selectedPar, validShots)
+    const evaluatedShots = evaluateHoleStrokesGained(validShots, selectedPar)
 
     setLoading(true)
 
@@ -480,7 +488,7 @@ function App() {
 
     const newHoleId = data[0].id
 
-    const shotRows = validShots.map((shot, index) => ({
+    const shotRows = evaluatedShots.map((shot, index) => ({
       user_id: session.user.id,
       round_id: roundId,
       hole_id: newHoleId,
@@ -492,6 +500,10 @@ function App() {
       penalty_type: shot.penalty_type || "None",
       auto_penalty: getPenaltyFromType(shot.penalty_type),
       is_putt: shot.is_putt,
+      sg_category: shot.sg_category,
+      expected_before: shot.expected_before,
+      expected_after: shot.expected_after,
+      strokes_gained: shot.strokes_gained,
     }))
 
     const shotInsert = await insertShots(shotRows)
@@ -694,6 +706,16 @@ function App() {
 
   const shotTotals = useMemo(() => calculateShotModeTotals(shots), [shots])
 
+  const roundSgSummary = useMemo(
+  () => summarizeRoundStrokesGained(roundShots),
+  [roundShots]
+)
+
+const reviewSgSummary = useMemo(
+  () => summarizeRoundStrokesGained(selectedReviewShots),
+  [selectedReviewShots]
+)
+
   if (authLoading) {
     return (
       <div style={{ padding: 40, fontFamily: "system-ui, sans-serif" }}>
@@ -736,17 +758,21 @@ function App() {
         course={course}
         date={date}
         summary={summary}
+        sgSummary={roundSgSummary}
         goHomeAndReset={goHomeAndReset}
         styles={styles}
       />
     )
   }
 
+
+
   if (screen === "review") {
     return (
       <ReviewRoundScreen
         selectedReviewRound={selectedReviewRound}
         reviewSummary={reviewSummary}
+        reviewSgSummary={reviewSgSummary}
         deleteRound={deleteRound}
         loading={loading}
         goHome={() => setScreen("home")}

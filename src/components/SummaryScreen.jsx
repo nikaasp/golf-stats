@@ -7,6 +7,7 @@ export default function SummaryScreen({
   course,
   date,
   summary,
+  sgSummary,
   goHomeAndReset,
   styles,
 }) {
@@ -65,27 +66,30 @@ export default function SummaryScreen({
 
         <div style={styles.sectionCard}>
           <h2 style={styles.sectionTitle}>Strokes Gained</h2>
-          <div style={styles.statsGrid}>
-            <StatCard
-              label="Tee Shots"
-              value={formatStrokesGained(summary.sgTeeShots ?? summary.sgTeeShot ?? summary.sgTee)}
-              styles={styles}
-            />
-            <StatCard
-              label="Approach"
-              value={formatStrokesGained(summary.sgApproach)}
-              styles={styles}
-            />
-            <StatCard
-              label="Short Game"
-              value={formatStrokesGained(summary.sgShortGame)}
-              styles={styles}
-            />
-            <StatCard
-              label="Putting"
-              value={formatStrokesGained(summary.sgPutting)}
-              styles={styles}
-            />
+
+          <div style={styles.summaryInline}>
+            <span>Off the tee</span>
+            <strong>{formatStrokesGained(sgSummary?.tee)}</strong>
+          </div>
+
+          <div style={styles.summaryInline}>
+            <span>Approach</span>
+            <strong>{formatStrokesGained(sgSummary?.approach)}</strong>
+          </div>
+
+          <div style={styles.summaryInline}>
+            <span>Short game</span>
+            <strong>{formatStrokesGained(sgSummary?.shortGame)}</strong>
+          </div>
+
+          <div style={styles.summaryInline}>
+            <span>Putting</span>
+            <strong>{formatStrokesGained(sgSummary?.putting)}</strong>
+          </div>
+
+          <div style={styles.summaryInline}>
+            <span>Total</span>
+            <strong>{formatStrokesGained(sgSummary?.total)}</strong>
           </div>
         </div>
 
