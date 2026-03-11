@@ -50,7 +50,7 @@ export default function ShotCard({
 
       <label style={styles.label}>Distance to hole</label>
       <DistancePicker
-        value={Number(shot.distance_to_flag)}
+        value={shot.distance_to_flag}
         onChange={(value) => updateShot(index, "distance_to_flag", value)}
         styles={styles}
       />

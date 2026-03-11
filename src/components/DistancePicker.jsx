@@ -1,185 +1,198 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { DISTANCE_OPTIONS } from "../utils/constants"
+import { useEffect, useState } from "react"
 
 export default function DistancePicker({ value, onChange, styles }) {
-  const ITEM_HEIGHT = 44
-  const VISIBLE_ROWS = 7
-  const SIDE_SPACER_HEIGHT = ((VISIBLE_ROWS - 1) / 2) * ITEM_HEIGHT
-  const wheelRef = useRef(null)
-  const scrollTimeoutRef = useRef(null)
-
-  const numericOptions = useMemo(
-    () => DISTANCE_OPTIONS.map((opt) => Number(opt)),
-    []
-  )
-  const [scrollTop, setScrollTop] = useState(0)
-
-  const selectedIndex = useMemo(() => {
-    const numericValue = Number(value)
-    const matchedIndex = numericOptions.findIndex((opt) => opt === numericValue)
-    return matchedIndex >= 0 ? matchedIndex : 0
-  }, [numericOptions, value])
+  const keypadRows = [
+    ["1", "2", "3"],
+    ["4", "5", "6"],
+    ["7", "8", "9"],
+    [",", "0", "backspace"],
+  ]
+  const [draftValue, setDraftValue] = useState("")
 
   useEffect(() => {
-    if (!wheelRef.current) {
+    setDraftValue(formatValue(value))
+  }, [value])
+
+  function formatValue(nextValue) {
+    if (nextValue === null || nextValue === undefined || nextValue === "") {
+      return ""
+    }
+
+    return String(nextValue).replace(".", ",")
+  }
+
+  function parseValue(nextValue) {
+    if (nextValue === "") {
+      return ""
+    }
+
+    if (!/^\d+(,\d*)?$/.test(nextValue)) {
+      return null
+    }
+
+    if (nextValue.endsWith(",")) {
+      return null
+    }
+
+    const parsedValue = Number(nextValue.replace(",", "."))
+    return Number.isFinite(parsedValue) ? parsedValue : null
+  }
+
+  function commitValue(nextValue) {
+    setDraftValue(nextValue)
+
+    const parsedValue = parseValue(nextValue)
+    if (parsedValue === null) {
       return
     }
-    const nextScrollTop = selectedIndex * ITEM_HEIGHT
-    wheelRef.current.scrollTo({ top: nextScrollTop, behavior: "auto" })
-    setScrollTop(nextScrollTop)
-  }, [selectedIndex])
 
-  useEffect(() => {
-    return () => {
-      if (scrollTimeoutRef.current) {
-        window.clearTimeout(scrollTimeoutRef.current)
+    onChange(parsedValue)
+  }
+
+  function appendKey(key) {
+    if (key === "backspace") {
+      commitValue(draftValue.slice(0, -1))
+      return
+    }
+
+    if (key === ",") {
+      if (draftValue.includes(",")) {
+        return
       }
-    }
-  }, [])
 
-  const clampIndex = (index) =>
-    Math.max(0, Math.min(numericOptions.length - 1, index))
-
-  const scrollToIndex = (index, behavior = "smooth") => {
-    if (!wheelRef.current) {
+      commitValue(draftValue ? `${draftValue},` : "0,")
       return
     }
 
-    const safeIndex = clampIndex(index)
-    const nextScrollTop = safeIndex * ITEM_HEIGHT
-    wheelRef.current.scrollTo({ top: nextScrollTop, behavior })
-    setScrollTop(nextScrollTop)
-
-    const nextValue = numericOptions[safeIndex]
-    if (nextValue !== Number(value)) {
-      onChange(nextValue)
-    }
+    const nextValue = draftValue === "0" ? key : `${draftValue}${key}`
+    commitValue(nextValue)
   }
 
-  const commitFromScroll = (scrollTop) => {
-    const index = clampIndex(Math.round(scrollTop / ITEM_HEIGHT))
-    const nextValue = numericOptions[index]
-    if (nextValue !== Number(value)) {
-      onChange(nextValue)
-    }
-  }
+  function handleManualInput(event) {
+    const rawValue = event.target.value.replace(/\./g, ",")
 
-  const handleScroll = (event) => {
-    const nextScrollTop = event.currentTarget.scrollTop
-    setScrollTop(nextScrollTop)
-    commitFromScroll(nextScrollTop)
-
-    if (scrollTimeoutRef.current) {
-      window.clearTimeout(scrollTimeoutRef.current)
+    if (rawValue === "") {
+      commitValue("")
+      return
     }
 
-    scrollTimeoutRef.current = window.setTimeout(() => {
-      scrollToIndex(Math.round(nextScrollTop / ITEM_HEIGHT))
-    }, 80)
-  }
+    if (!/^\d*(,\d*)?$/.test(rawValue)) {
+      return
+    }
 
-  const floatingIndex = scrollTop / ITEM_HEIGHT
+    commitValue(rawValue.startsWith(",") ? `0${rawValue}` : rawValue)
+  }
 
   return (
     <div
       style={{
         ...styles.input,
-        height: `${VISIBLE_ROWS * ITEM_HEIGHT}px`,
-        padding: 0,
-        position: "relative",
-        overflow: "hidden",
-        borderRadius: "22px",
-        border: "1px solid #d6deea",
-        background: "linear-gradient(180deg, #f8fbff 0%, #edf4ff 100%)",
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.85), 0 10px 24px rgba(37,99,235,0.08)",
+        padding: "12px",
+        borderRadius: "18px",
+        border: "1px solid #cbd5e1",
+        background: "linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%)",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
       }}
     >
       <div
-        ref={wheelRef}
         style={{
-          height: "100%",
-          overflowY: "auto",
-          scrollSnapType: "y mandatory",
-          WebkitOverflowScrolling: "touch",
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          overscrollBehaviorY: "contain",
-          paddingInline: "8px",
+          borderRadius: "16px",
+          background: "rgba(255,255,255,0.92)",
+          border: "1px solid #dbe5f0",
+          padding: "14px 16px",
+          boxShadow: "inset 0 1px 3px rgba(15,23,42,0.04)",
         }}
-        onScroll={handleScroll}
-        role="listbox"
-        aria-label="Distance to hole"
       >
-        <div style={{ height: `${SIDE_SPACER_HEIGHT}px` }} aria-hidden="true" />
-
-        {numericOptions.map((opt, index) => {
-          const isActive = opt === Number(value)
-          const distanceFromCenter = Math.abs(index - floatingIndex)
-          const emphasis = Math.max(0, 1 - distanceFromCenter / 3)
-          const scale = 0.82 + emphasis * 0.24
-          const opacity = 0.28 + emphasis * 0.72
-          const rotateX = (index - floatingIndex) * -11
-          return (
-            <button
-              key={opt}
-              type="button"
-              role="option"
-              aria-selected={isActive}
-              style={{
-                width: "100%",
-                height: `${ITEM_HEIGHT}px`,
-                border: "none",
-                background: "transparent",
-                scrollSnapAlign: "center",
-                scrollSnapStop: "always",
-                fontSize: isActive ? "26px" : `${17 + emphasis * 3}px`,
-                fontWeight: isActive ? 800 : 600,
-                color: isActive ? "#0f172a" : "#64748b",
-                cursor: "pointer",
-                opacity,
-                transform: `perspective(320px) rotateX(${rotateX}deg) scale(${scale})`,
-                transformOrigin: "center center",
-                transition: "transform 120ms ease, opacity 120ms ease, color 120ms ease, font-size 120ms ease",
-                letterSpacing: isActive ? "-0.04em" : "-0.02em",
-                textShadow: isActive ? "0 1px 0 rgba(255,255,255,0.6)" : "none",
-              }}
-              onClick={() => scrollToIndex(index)}
-            >
-              {opt.toFixed(1)} m
-            </button>
-          )
-        })}
-
-        <div style={{ height: `${SIDE_SPACER_HEIGHT}px` }} aria-hidden="true" />
+        <div
+          style={{
+            fontSize: "12px",
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#64748b",
+            marginBottom: "6px",
+          }}
+        >
+          Distance
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: "8px",
+          }}
+        >
+          <input
+            type="text"
+            inputMode="decimal"
+            enterKeyHint="done"
+            aria-label="Distance to hole in meters"
+            placeholder="0"
+            value={draftValue}
+            onChange={handleManualInput}
+            style={{
+              width: "100%",
+              border: "none",
+              outline: "none",
+              background: "transparent",
+              padding: 0,
+              fontSize: "34px",
+              fontWeight: 800,
+              lineHeight: 1,
+              letterSpacing: "-0.05em",
+              color: "#0f172a",
+              fontVariantNumeric: "tabular-nums",
+            }}
+          />
+          <span
+            style={{
+              fontSize: "16px",
+              fontWeight: 700,
+              color: "#64748b",
+            }}
+          >
+            m
+          </span>
+        </div>
       </div>
 
       <div
-        aria-hidden="true"
         style={{
-          position: "absolute",
-          top: "50%",
-          left: "10px",
-          right: "10px",
-          transform: "translateY(-50%)",
-          height: `${ITEM_HEIGHT}px`,
-          borderTop: "1px solid rgba(37,99,235,0.18)",
-          borderBottom: "1px solid rgba(37,99,235,0.18)",
-          borderRadius: "16px",
-          background: "linear-gradient(180deg, rgba(255,255,255,0.88) 0%, rgba(219,234,254,0.72) 100%)",
-          boxShadow: "0 6px 16px rgba(37,99,235,0.12)",
-          pointerEvents: "none",
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: "8px",
         }}
-      />
+      >
+        {keypadRows.flat().map((key) => {
+          const isUtilityKey = key === "," || key === "backspace"
+          const label = key === "backspace" ? "Delete" : key
 
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "linear-gradient(180deg, rgba(238,244,255,0.96) 0%, rgba(238,244,255,0.6) 18%, rgba(238,244,255,0) 34%, rgba(238,244,255,0) 66%, rgba(238,244,255,0.6) 82%, rgba(238,244,255,0.96) 100%)",
-          pointerEvents: "none",
-        }}
-      />
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => appendKey(key)}
+              style={{
+                minHeight: "54px",
+                borderRadius: "16px",
+                border: isUtilityKey ? "1px solid #bfdbfe" : "1px solid #dbe5f0",
+                background: isUtilityKey
+                  ? "linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%)"
+                  : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)",
+                color: "#0f172a",
+                fontSize: key === "backspace" ? "15px" : "24px",
+                fontWeight: 700,
+                boxShadow: "0 6px 16px rgba(15,23,42,0.06)",
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
