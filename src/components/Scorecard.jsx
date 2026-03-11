@@ -30,7 +30,7 @@ export default function Scorecard({ holes, styles }) {
         <div style={styles.scorecardGrid}>
           {list.map((h) => (
             <div key={h.id} style={styles.scoreCell}>
-              <div style={styles.scoreHoleNo}>{h.hole_number}</div>
+              <div style={styles.scoreHoleNo}>Hole {h.hole_number} (Par {h.par ?? "-"})</div>
               <div style={{ ...styles.scoreBadge, ...scoreStyle(h.score, h.par, styles) }}>
                 {h.score}
               </div>
