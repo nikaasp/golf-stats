@@ -9,7 +9,29 @@ export default function HomeScreen({
   deleteRound,
   loading,
   styles,
+  courses,
+  selectedCourseId,
+  setSelectedCourseId,
+  isNewCourse,
+  setIsNewCourse,
 }) {
+  function handleCourseSelection(value) {
+    if (value === "new") {
+      setSelectedCourseId("new")
+      setIsNewCourse(true)
+      setCourse("")
+      return
+    }
+
+    setSelectedCourseId(value)
+    setIsNewCourse(false)
+
+    const selectedCourse = courses.find((c) => c.id === value)
+    if (selectedCourse) {
+      setCourse(selectedCourse.name)
+    }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.mobileShell}>
@@ -17,13 +39,32 @@ export default function HomeScreen({
           <h1 style={styles.heroTitle}>Golf Stats</h1>
           <p style={styles.heroText}>Quick logging for the course.</p>
 
-          <label style={styles.label}>Course name</label>
-          <input
+          <label style={styles.label}>Select course</label>
+          <select
             style={styles.input}
-            placeholder="Course name"
-            value={course}
-            onChange={(e) => setCourse(e.target.value)}
-          />
+            value={selectedCourseId}
+            onChange={(e) => handleCourseSelection(e.target.value)}
+          >
+            <option value="">Select course...</option>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+            <option value="new">+ New course</option>
+          </select>
+
+          {isNewCourse && (
+            <>
+              <label style={styles.label}>New course name</label>
+              <input
+                style={styles.input}
+                placeholder="Course name"
+                value={course}
+                onChange={(e) => setCourse(e.target.value)}
+              />
+            </>
+          )}
 
           <label style={styles.label}>Date</label>
           <input
