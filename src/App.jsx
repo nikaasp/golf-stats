@@ -282,7 +282,7 @@ function App() {
         .map((shot, i) => ({
           ...shot,
           shot_number: i + 1,
-          lie: shot.is_putt ? shot.lie : getDefaultLieForShot(i + 1),
+          lie: getDefaultLieForShot(i + 1),
         }))
 
       setActiveShotIndex(Math.max(0, Math.min(activeShotIndex, updated.length - 1)))
@@ -291,100 +291,72 @@ function App() {
   }
 
   function updateShot(index, field, value) {
-    setShots((prev) =>
-      prev.map((shot, i) => {
-        if (i !== index) return shot
+  setShots((prev) =>
+    prev.map((shot, i) => {
+      if (i !== index) return shot
+      return { ...shot, [field]: value }
+    })
+  )
 
-        const updated = { ...shot, [field]: value }
-
-        if (field === "is_putt" && value === true) {
-          return {
-            ...updated,
-            lie: "Green",
-            shot_result: "Pured",
-            penalty_type: "None",
-          }
-        }
-
-        if (field === "is_putt" && value === false) {
-          return {
-            ...updated,
-            lie: getDefaultLieForShot(index + 1),
-          }
-        }
-
-        if (field === "shot_category") {
-          const isPutting = value === "Putting"
-          return {
-            ...updated,
-            is_putt: isPutting,
-            lie: isPutting ? "Green" : getDefaultLieForShot(index + 1),
-          }
-        }
-
-        return updated
-      })
-    )
-
-    setActiveShotIndex(index)
+  setActiveShotIndex(index)
   }
 
   async function finishRound(finalCoursePars = null) {
-  const parsToSave = finalCoursePars || newCoursePars
+    const parsToSave = finalCoursePars || newCoursePars
 
-  if (isNewCourse && session?.user && course.trim() && parsToSave.length > 0) {
-    const normalizedName = course.trim()
+    if (isNewCourse && session?.user && course.trim() && parsToSave.length > 0) {
+      const normalizedName = course.trim()
 
-    const existingCourseRes = await findCourseByName(session.user.id, normalizedName)
+      const existingCourseRes = await findCourseByName(session.user.id, normalizedName)
 
-    if (existingCourseRes.error) {
-      alert("Round saved, but course lookup failed: " + existingCourseRes.error.message)
-    } else {
-      const existingCourse = existingCourseRes.data?.[0]
-
-      if (existingCourse) {
-        const updateRes = await updateCourseById(existingCourse.id, {
-          name: normalizedName,
-          hole_pars: parsToSave,
-          last_played_at: new Date().toISOString(),
-        })
-
-        if (updateRes.error) {
-          alert("Round saved, but existing course could not be updated: " + updateRes.error.message)
-        } else if (roundId) {
-          await updateRoundCourse(roundId, existingCourse.id)
-        }
+      if (existingCourseRes.error) {
+        alert("Round saved, but course lookup failed: " + existingCourseRes.error.message)
       } else {
-        const { data: courseData, error: courseError } = await createCourse({
-          user_id: session.user.id,
-          name: normalizedName,
-          hole_pars: parsToSave,
-          last_played_at: new Date().toISOString(),
-        })
+        const existingCourse = existingCourseRes.data?.[0]
 
-        if (courseError) {
-          alert("Round saved, but course could not be created: " + courseError.message)
-        } else if (courseData?.[0]?.id && roundId) {
-          await updateRoundCourse(roundId, courseData[0].id)
+        if (existingCourse) {
+          const updateRes = await updateCourseById(existingCourse.id, {
+            name: normalizedName,
+            hole_pars: parsToSave,
+            last_played_at: new Date().toISOString(),
+          })
+
+          if (updateRes.error) {
+            alert("Round saved, but existing course could not be updated: " + updateRes.error.message)
+          } else if (roundId) {
+            await updateRoundCourse(roundId, existingCourse.id)
+          }
+        } else {
+          const { data: courseData, error: courseError } = await createCourse({
+            user_id: session.user.id,
+            name: normalizedName,
+            hole_pars: parsToSave,
+            last_played_at: new Date().toISOString(),
+          })
+
+          if (courseError) {
+            alert("Round saved, but course could not be created: " + courseError.message)
+          } else if (courseData?.[0]?.id && roundId) {
+            await updateRoundCourse(roundId, courseData[0].id)
+          }
         }
       }
     }
-  }
 
-  const bundle = await fetchRoundBundle(roundId)
+    const bundle = await fetchRoundBundle(roundId)
 
-  if (bundle.holesRes.error) {
-    alert("Could not load holes: " + bundle.holesRes.error.message)
-    return
-  }
-  if (bundle.shotsRes.error) {
-    alert("Could not load shots: " + bundle.shotsRes.error.message)
-    return
-  }
+    if (bundle.holesRes.error) {
+      alert("Could not load holes: " + bundle.holesRes.error.message)
+      return
+    }
+    if (bundle.shotsRes.error) {
+      alert("Could not load shots: " + bundle.shotsRes.error.message)
+      return
+    }
 
-  setHolesData(bundle.holesRes.data || [])
-  setRoundShots(bundle.shotsRes.data || [])
-  setScreen("summary")
+    setHolesData(bundle.holesRes.data || [])
+    setRoundShots(bundle.shotsRes.data || [])
+    setScreen("summary")
   }
 
   async function saveScoreHole() {
@@ -464,7 +436,7 @@ function App() {
 
     const totals = calculateShotModeTotals(shots)
     const inferred = inferHoleValuesFromShots(selectedPar, validShots)
-    const evaluatedShots = evaluateHoleStrokesGained(validShots, selectedPar)
+    const evaluatedShots = evaluateHoleStrokesGained(validShots)
 
     setLoading(true)
 
@@ -496,12 +468,11 @@ function App() {
       hole_id: newHoleId,
       hole_number: hole,
       shot_number: index + 1,
-      lie: shot.is_putt ? "Green" : shot.lie,
+      lie: shot.lie,
       distance_to_flag: Number(shot.distance_to_flag),
-      shot_result: shot.is_putt ? null : shot.shot_result || null,
+      miss_pattern: shot.miss_pattern || null,
       penalty_type: shot.penalty_type || "None",
       auto_penalty: getPenaltyFromType(shot.penalty_type),
-      is_putt: shot.is_putt,
       sg_category: shot.sg_category,
       expected_before: shot.expected_before,
       expected_after: shot.expected_after,
@@ -521,41 +492,41 @@ function App() {
   }
 
   async function saveHole() {
-  if (!entryMode) {
-    alert('Please choose either "Shot by shot" or "Score"')
-    return
-  }
+    if (!entryMode) {
+      alert('Please choose either "Shot by shot" or "Score"')
+      return
+    }
 
-  let ok = false
-  let parForThisHole = null
+    let ok = false
+    let parForThisHole = null
 
-  if (entryMode === "score") {
-    parForThisHole = par === "" ? null : parseInt(par, 10)
-    ok = await saveScoreHole()
-  }
+    if (entryMode === "score") {
+      parForThisHole = par === "" ? null : parseInt(par, 10)
+      ok = await saveScoreHole()
+    }
 
-  if (entryMode === "shot_by_shot") {
-    parForThisHole = par === "" ? null : parseInt(par, 10)
-    ok = await saveShotByShotHole()
-  }
+    if (entryMode === "shot_by_shot") {
+      parForThisHole = par === "" ? null : parseInt(par, 10)
+      ok = await saveShotByShotHole()
+    }
 
-  if (!ok) return
+    if (!ok) return
 
-  const finalPars =
-    isNewCourse && parForThisHole !== null
-      ? [...newCoursePars.filter((h) => h.hole !== hole), { hole, par: parForThisHole }].sort(
-          (a, b) => a.hole - b.hole
-        )
-      : newCoursePars
+    const finalPars =
+      isNewCourse && parForThisHole !== null
+        ? [...newCoursePars.filter((h) => h.hole !== hole), { hole, par: parForThisHole }].sort(
+            (a, b) => a.hole - b.hole
+          )
+        : newCoursePars
 
-  if (hole >= 18) {
+    if (hole >= 18) {
+      resetHoleInputs()
+      await finishRound(finalPars)
+      return
+    }
+
+    setHole(hole + 1)
     resetHoleInputs()
-    await finishRound(finalPars)
-    return
-  }
-
-  setHole(hole + 1)
-  resetHoleInputs()   
   }
 
   async function skipHole() {
@@ -709,135 +680,151 @@ function App() {
   const shotTotals = useMemo(() => calculateShotModeTotals(shots), [shots])
 
   const roundSgSummary = useMemo(
-  () => summarizeRoundStrokesGained(roundShots),
-  [roundShots]
-)
+    () => summarizeRoundStrokesGained(roundShots),
+    [roundShots]
+  )
 
-const reviewSgSummary = useMemo(
-  () => summarizeRoundStrokesGained(selectedReviewShots),
-  [selectedReviewShots]
-)
+  const reviewSgSummary = useMemo(
+    () => summarizeRoundStrokesGained(selectedReviewShots),
+    [selectedReviewShots]
+  )
 
   if (authLoading) {
     return (
-      <div style={{ padding: 40, fontFamily: "system-ui, sans-serif" }}>
-        Loading...
+      <div className="app-shell">
+        <div style={{ padding: 40, fontFamily: "system-ui, sans-serif" }}>
+          Loading...
+        </div>
       </div>
     )
   }
 
   if (!session) {
-    return <AuthScreen />
+    return (
+      <div className="app-shell">
+        <AuthScreen />
+      </div>
+    )
   }
 
   if (screen === "home") {
     return (
-      <HomeScreen
-        course={course}
-        date={date}
-        setCourse={setCourse}
-        setDate={setDate}
-        startRound={startRound}
-        loading={loading}
-        styles={styles}
-        session={session}
-        signOut={signOut}
-        courses={courses}
-        selectedCourseId={selectedCourseId}
-        setSelectedCourseId={setSelectedCourseId}
-        isNewCourse={isNewCourse}
-        setIsNewCourse={setIsNewCourse}
-        goToRounds={() => setScreen("rounds")}
-        goToAnalytics={() => setScreen("analytics")}
-      />
+      <div className="app-shell">
+        <HomeScreen
+          course={course}
+          date={date}
+          setCourse={setCourse}
+          setDate={setDate}
+          startRound={startRound}
+          loading={loading}
+          styles={styles}
+          session={session}
+          signOut={signOut}
+          courses={courses}
+          selectedCourseId={selectedCourseId}
+          setSelectedCourseId={setSelectedCourseId}
+          isNewCourse={isNewCourse}
+          setIsNewCourse={setIsNewCourse}
+          goToRounds={() => setScreen("rounds")}
+          goToAnalytics={() => setScreen("analytics")}
+        />
+      </div>
     )
   }
 
   if (screen === "rounds") {
     return (
-      <RoundsListScreen
-        reviewRounds={reviewRounds}
-        loadRoundDetailsForReview={loadRoundDetailsForReview}
-        deleteRound={deleteRound}
-        loading={loading}
-        goHome={() => setScreen("home")}
-        styles={styles}
-      />
+      <div className="app-shell">
+        <RoundsListScreen
+          reviewRounds={reviewRounds}
+          loadRoundDetailsForReview={loadRoundDetailsForReview}
+          deleteRound={deleteRound}
+          loading={loading}
+          goHome={() => setScreen("home")}
+          styles={styles}
+        />
+      </div>
     )
   }
 
   if (screen === "analytics") {
     return (
-      <AnalyticsScreen
-        courses={courses}
-        goHome={() => setScreen("home")}
-        styles={styles}
-      />
+      <div className="app-shell">
+        <AnalyticsScreen
+          courses={courses}
+          goHome={() => setScreen("home")}
+          styles={styles}
+        />
+      </div>
     )
   }
 
   if (screen === "summary") {
     return (
-      <SummaryScreen
-        course={course}
-        date={date}
-        summary={summary}
-        sgSummary={roundSgSummary}
-        goHomeAndReset={goHomeAndReset}
-        styles={styles}
-      />
+      <div className="app-shell">
+        <SummaryScreen
+          course={course}
+          date={date}
+          summary={summary}
+          sgSummary={roundSgSummary}
+          goHomeAndReset={goHomeAndReset}
+          styles={styles}
+        />
+      </div>
     )
   }
 
-
-
   if (screen === "review") {
     return (
-      <ReviewRoundScreen
-        selectedReviewRound={selectedReviewRound}
-        reviewSummary={reviewSummary}
-        reviewSgSummary={reviewSgSummary}
-        deleteRound={deleteRound}
-        loading={loading}
-        goHome={() => setScreen("home")}
-        styles={styles}
-      />
+      <div className="app-shell">
+        <ReviewRoundScreen
+          selectedReviewRound={selectedReviewRound}
+          reviewSummary={reviewSummary}
+          reviewSgSummary={reviewSgSummary}
+          deleteRound={deleteRound}
+          loading={loading}
+          goHome={() => setScreen("home")}
+          styles={styles}
+        />
+      </div>
     )
   }
 
   return (
-    <PlayRoundScreen
-      course={course}
-      date={date}
-      hole={hole}
-      par={par}
-      setPar={setPar}
-      entryMode={entryMode}
-      setEntryMode={setEntryMode}
-      score={score}
-      setScore={setScore}
-      putts={putts}
-      setPutts={setPutts}
-      fairway={fairway}
-      setFairway={setFairway}
-      gir={gir}
-      setGir={setGir}
-      penalty={penalty}
-      setPenalty={setPenalty}
-      shots={shots}
-      activeShotIndex={activeShotIndex}
-      setActiveShotIndex={setActiveShotIndex}
-      updateShot={updateShot}
-      removeShotCard={removeShotCard}
-      addShotCard={addShotCard}
-      shotTotals={shotTotals}
-      saveHole={saveHole}
-      skipHole={skipHole}
-      endRoundNow={endRoundNow}
-      goHomeAndReset={goHomeAndReset}
-      loading={loading}
-      styles={styles}
-    />
+    <div className="app-shell">
+      <PlayRoundScreen
+        course={course}
+        date={date}
+        hole={hole}
+        par={par}
+        setPar={setPar}
+        entryMode={entryMode}
+        setEntryMode={setEntryMode}
+        score={score}
+        setScore={setScore}
+        putts={putts}
+        setPutts={setPutts}
+        fairway={fairway}
+        setFairway={setFairway}
+        gir={gir}
+        setGir={setGir}
+        penalty={penalty}
+        setPenalty={setPenalty}
+        shots={shots}
+        activeShotIndex={activeShotIndex}
+        setActiveShotIndex={setActiveShotIndex}
+        updateShot={updateShot}
+        removeShotCard={removeShotCard}
+        addShotCard={addShotCard}
+        shotTotals={shotTotals}
+        saveHole={saveHole}
+        skipHole={skipHole}
+        endRoundNow={endRoundNow}
+        goHomeAndReset={goHomeAndReset}
+        loading={loading}
+        styles={styles}
+      />
+    </div>
   )
 }
 

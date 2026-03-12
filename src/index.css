@@ -1,68 +1,264 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color: #1f2937;
+  background-color: #f3f4f6;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  --bg: #f3f4f6;
+  --card: #ffffff;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --border: #d1d5db;
+  --primary: #2563eb;
+  --primary-soft: #dbeafe;
+  --success: #15803d;
+  --success-soft: #dcfce7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-width: 320px;
+  min-height: 100%;
+  width: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
 }
 
 a {
   font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  color: var(--primary);
+  text-decoration: none;
 }
+
 a:hover {
-  color: #535bf2;
+  text-decoration: underline;
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+button,
+input,
+select,
+textarea {
+  font: inherit;
 }
 
 button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 0.65rem 0.9rem;
+  background: #fff;
+  color: var(--text);
   cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    transform 0.05s ease;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+button:hover {
+  border-color: var(--primary);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button:focus,
+button:focus-visible,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--primary-soft);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  background: #fff;
+  color: var(--text);
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* App layout */
+.app-shell {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.card,
+.shot-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.field-group {
+  margin-bottom: 12px;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+.helper-text {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+/* Compact rows */
+.row {
+  display: grid;
+  gap: 10px;
+}
+
+.row.two {
+  grid-template-columns: 1fr 1fr;
+}
+
+.row.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+/* Shot summary line */
+.shot-summary {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+/* Miss Pattern */
+.miss-pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.miss-pattern-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 6px;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.miss-pattern-btn:hover {
+  background: #f9fafb;
+}
+
+.miss-pattern-btn.selected {
+  border-color: var(--success);
+  background: var(--success-soft);
+  font-weight: 700;
+}
+
+.miss-pattern-btn.spot-on {
+  border-width: 2px;
+}
+
+.miss-pattern-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.miss-pattern-text {
+  font-size: 0.76rem;
+  line-height: 1.15;
+}
+
+/* Small utility buttons */
+.button-primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.button-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.button-secondary {
+  background: #fff;
+  color: var(--text);
+}
+
+.button-danger {
+  background: #fff;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .app-shell {
+    padding: 12px;
   }
-  a:hover {
-    color: #747bff;
+
+  .row.two,
+  .row.three {
+    grid-template-columns: 1fr;
   }
-  button {
-    background-color: #f9f9f9;
+
+  .miss-pattern-btn {
+    min-height: 60px;
+    padding: 8px 4px;
+  }
+
+  .miss-pattern-text {
+    font-size: 0.72rem;
   }
 }

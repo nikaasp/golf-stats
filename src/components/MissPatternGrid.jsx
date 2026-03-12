@@ -1,0 +1,47 @@
+import React from "react";
+
+const OPTIONS = [
+  [
+    { value: "long_left", label: "Long Left", icon: "↖" },
+    { value: "long", label: "Long", icon: "↑" },
+    { value: "long_right", label: "Long Right", icon: "↗" },
+  ],
+  [
+    { value: "left", label: "Left", icon: "←" },
+    { value: "spot_on", label: "Spot On!", icon: "🎯" },
+    { value: "right", label: "Right", icon: "→" },
+  ],
+  [
+    { value: "short_left", label: "Short Left", icon: "↙" },
+    { value: "short", label: "Short", icon: "↓" },
+    { value: "short_right", label: "Short Right", icon: "↘" },
+  ],
+];
+
+export default function MissPatternGrid({ value, onChange }) {
+  return (
+    <div className="field-group">
+      <label className="field-label">Miss Pattern</label>
+
+      <div className="miss-pattern-grid">
+        {OPTIONS.flat().map((option) => {
+          const selected = value === option.value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className={`miss-pattern-btn ${selected ? "selected" : ""} ${
+                option.value === "spot_on" ? "spot-on" : ""
+              }`}
+              onClick={() => onChange(option.value)}
+            >
+              <span className="miss-pattern-icon">{option.icon}</span>
+              <span className="miss-pattern-text">{option.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

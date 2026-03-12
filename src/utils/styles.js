@@ -80,7 +80,7 @@ export const styles = {
     fontSize: "14px",
   },
   noData: {
-    color: "#6b7280",
+    color: "#5e6167",
     padding: "12px 0",
   },
   sectionTitle: {

@@ -49,6 +49,7 @@ export default function PlayRoundScreen({
   const renderStepper = (label, value, onDecrement, onIncrement) => (
     <div>
       <label style={styles.label}>{label}</label>
+
       <div
         style={{
           ...styles.input,
@@ -63,6 +64,7 @@ export default function PlayRoundScreen({
         <button type="button" style={styles.parButton} onClick={onDecrement}>
           -
         </button>
+
         <div
           style={{
             fontSize: "22px",
@@ -72,6 +74,7 @@ export default function PlayRoundScreen({
         >
           {value}
         </div>
+
         <button type="button" style={styles.parButton} onClick={onIncrement}>
           +
         </button>
@@ -82,16 +85,20 @@ export default function PlayRoundScreen({
   return (
     <div style={styles.page}>
       <div style={styles.mobileShell}>
+        {/* Header */}
         <div style={styles.sectionCard}>
           <div style={styles.playHeader}>
             <div>
               <div style={styles.playCourse}>{course}</div>
               <div style={styles.playDate}>{date}</div>
             </div>
+
             <div style={styles.holeCounter}>Hole {hole}/18</div>
           </div>
 
+          {/* Par */}
           <label style={styles.label}>Par</label>
+
           <div style={styles.parRow}>
             {[3, 4, 5].map((parOption) => (
               <button
@@ -108,7 +115,9 @@ export default function PlayRoundScreen({
             ))}
           </div>
 
+          {/* Mode */}
           <label style={styles.label}>How do you want to log this hole?</label>
+
           <div style={styles.segmentedWrap}>
             <button
               type="button"
@@ -134,6 +143,7 @@ export default function PlayRoundScreen({
           </div>
         </div>
 
+        {/* SCORE MODE */}
         {entryMode === "score" && (
           <div style={styles.sectionCard}>
             <h2 style={styles.sectionTitle}>Score Mode</h2>
@@ -159,6 +169,7 @@ export default function PlayRoundScreen({
                 onClick={() => setFairway((v) => !v)}
                 styles={styles}
               />
+
               <ToggleCard
                 label="GIR"
                 value={gir}
@@ -176,6 +187,7 @@ export default function PlayRoundScreen({
           </div>
         )}
 
+        {/* SHOT MODE */}
         {entryMode === "shot_by_shot" && (
           <div style={styles.sectionCard}>
             <h2 style={styles.sectionTitle}>Shot-by-Shot</h2>
@@ -183,7 +195,7 @@ export default function PlayRoundScreen({
             <div style={styles.shotCardList}>
               {shots.map((shot, index) => (
                 <ShotCard
-                  key={index}
+                  key={shot.id || index}
                   shot={shot}
                   index={index}
                   active={activeShotIndex === index}
@@ -195,7 +207,11 @@ export default function PlayRoundScreen({
               ))}
             </div>
 
-            <button type="button" style={styles.primaryButton} onClick={addShotCard}>
+            <button
+              type="button"
+              style={styles.primaryButton}
+              onClick={addShotCard}
+            >
               + Add Shot
             </button>
 
@@ -204,10 +220,12 @@ export default function PlayRoundScreen({
                 <span>Shots entered</span>
                 <strong>{shotTotals.shotCount}</strong>
               </div>
+
               <div style={styles.summaryInline}>
                 <span>Auto penalties</span>
                 <strong>{shotTotals.autoPenalty}</strong>
               </div>
+
               <div style={styles.summaryInline}>
                 <span>Calculated score</span>
                 <strong>{shotTotals.totalScore}</strong>
@@ -216,21 +234,39 @@ export default function PlayRoundScreen({
           </div>
         )}
 
+        {/* ACTION BAR */}
         <div style={styles.bottomActionBar}>
-          <button style={styles.primaryAction} onClick={saveHole} disabled={loading}>
+          <button
+            style={styles.primaryAction}
+            onClick={saveHole}
+            disabled={loading}
+          >
             {hole === 18 ? "Save & Finish" : "Save Hole"}
           </button>
 
           <div style={styles.secondaryActionsRow}>
-            <button style={styles.secondaryAction} onClick={skipHole} disabled={loading}>
+            <button
+              style={styles.secondaryAction}
+              onClick={skipHole}
+              disabled={loading}
+            >
               Skip Hole
             </button>
-            <button style={styles.dangerAction} onClick={endRoundNow} disabled={loading}>
+
+            <button
+              style={styles.dangerAction}
+              onClick={endRoundNow}
+              disabled={loading}
+            >
               End Round
             </button>
           </div>
 
-          <button style={styles.ghostAction} onClick={goHomeAndReset} disabled={loading}>
+          <button
+            style={styles.ghostAction}
+            onClick={goHomeAndReset}
+            disabled={loading}
+          >
             Cancel Round
           </button>
         </div>

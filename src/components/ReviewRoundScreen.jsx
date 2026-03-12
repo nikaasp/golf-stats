@@ -21,7 +21,7 @@ export default function ReviewRoundScreen({
     { label: "No GIR", value: reviewSummary.girMisses, color: "#d1d5db" },
   ]
 
-  const contactChart = Object.entries(reviewSummary.contactCounts)
+  const contactChart = Object.entries(reviewSummary.missPatternCounts)
     .filter(([, value]) => value > 0)
     .map(([label, value], idx) => ({
       label,

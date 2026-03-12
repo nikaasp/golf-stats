@@ -1,12 +1,26 @@
 import DistancePicker from "./DistancePicker"
 import { getPenaltyFromType } from "../utils/analytics"
 
-const SHOT_CATEGORIES = ["Tee Shot", "Approach shot", "Short Game", "Putting"]
-const CONTACT_GRID = [
-  ["Hook", "Top", "Slice"],
-  [null, "Pured", null],
-  ["Pull", "Duff", "Push"],
+const LIE_OPTIONS = ["Tee", "Fairway", "Rough", "Sand", "Recovery", "Green"]
+
+const MISS_PATTERN_GRID = [
+  [
+    { value: "long_left", label: "Long Left", icon: "↖" },
+    { value: "long", label: "Long", icon: "↑" },
+    { value: "long_right", label: "Long Right", icon: "↗" },
+  ],
+  [
+    { value: "left", label: "Left", icon: "←" },
+    { value: "spot_on", label: "Spot On!", icon: "🎯" },
+    { value: "right", label: "Right", icon: "→" },
+  ],
+  [
+    { value: "short_left", label: "Short Left", icon: "↙" },
+    { value: "short", label: "Short", icon: "↓" },
+    { value: "short_right", label: "Short Right", icon: "↘" },
+  ],
 ]
+
 const PENALTY_OPTIONS = [
   { value: "None", label: "None" },
   { value: "Hazard", label: "Hazard (+1)" },
@@ -22,6 +36,10 @@ export default function ShotCard({
   removeShotCard,
   styles,
 }) {
+  const handleFieldChange = (field, value) => {
+    updateShot(index, field, value)
+  }
+
   return (
     <div
       style={{
@@ -32,6 +50,7 @@ export default function ShotCard({
     >
       <div style={styles.shotCardHeader}>
         <div style={styles.shotNumber}>Shot {index + 1}</div>
+
         <button
           type="button"
           style={styles.removeGhostButton}
@@ -44,72 +63,89 @@ export default function ShotCard({
         </button>
       </div>
 
-      <label style={styles.label}>Shot category</label>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "8px",
-        }}
-      >
-        {SHOT_CATEGORIES.map((category) => (
-          <button
-            key={category}
-            type="button"
-            style={{
-              ...styles.segmentedButton,
-              ...(shot.shot_category === category ? styles.segmentedActive : {}),
-            }}
-            onClick={(e) => {
-              e.stopPropagation()
-              updateShot(index, "shot_category", category)
-            }}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
-
-      <label style={styles.label}>Distance to hole</label>
-      <DistancePicker
-        value={shot.distance_to_flag}
-        onChange={(value) => updateShot(index, "distance_to_flag", value)}
-        styles={styles}
-      />
-
-      <label style={styles.label}>Club contact</label>
+      <label style={styles.label}>Lie</label>
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
           gap: "8px",
+          marginBottom: "12px",
         }}
       >
-        {CONTACT_GRID.flat().map((option, indexInGrid) => {
-          if (!option) {
-            return <div key={`blank-${indexInGrid}`} aria-hidden="true" />
-          }
-
-          return (
-            <button
-              key={option}
-              type="button"
-              style={{
-                ...styles.segmentedButton,
-                ...(shot.shot_result === option ? styles.segmentedActive : {}),
-              }}
-              onClick={(e) => {
-                e.stopPropagation()
-                updateShot(index, "shot_result", option)
-              }}
-            >
-              {option}
-            </button>
-          )
-        })}
+        {LIE_OPTIONS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            style={{
+              ...styles.segmentedButton,
+              ...(shot.lie === option ? styles.segmentedActive : {}),
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleFieldChange("lie", option)
+            }}
+          >
+            {option}
+          </button>
+        ))}
       </div>
 
-      <label style={styles.label}>Penalty result</label>
+      <label style={styles.label}>Distance to target</label>
+      <DistancePicker
+        value={shot.distance_to_flag}
+        onChange={(value) => handleFieldChange("distance_to_flag", value)}
+        styles={styles}
+      />
+
+      <label style={styles.label}>Miss Pattern</label>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+          gap: "8px",
+          marginBottom: "12px",
+        }}
+      >
+        {MISS_PATTERN_GRID.flat().map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            style={{
+              ...styles.segmentedButton,
+              minHeight: "64px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "4px",
+              ...(shot.miss_pattern === option.value ? styles.segmentedActive : {}),
+              ...(option.value === "spot_on"
+                ? {
+                    borderWidth: "2px",
+                    fontWeight: 700,
+                  }
+                : {}),
+            }}
+            onClick={(e) => {
+              e.stopPropagation()
+              handleFieldChange("miss_pattern", option.value)
+            }}
+          >
+            <span style={{ fontSize: "16px", lineHeight: 1 }}>{option.icon}</span>
+            <span
+              style={{
+                fontSize: "12px",
+                lineHeight: 1.15,
+                textAlign: "center",
+              }}
+            >
+              {option.label}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <label style={styles.label}>Penalty outcome</label>
       <div
         style={{
           display: "grid",
@@ -127,7 +163,7 @@ export default function ShotCard({
             }}
             onClick={(e) => {
               e.stopPropagation()
-              updateShot(index, "penalty_type", option.value)
+              handleFieldChange("penalty_type", option.value)
             }}
           >
             {option.label}

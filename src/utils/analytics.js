@@ -13,11 +13,9 @@ export function getDefaultLieForShot(shotNumber) {
 export function makeShot(shotNumber) {
   return {
     shot_number: shotNumber,
-    is_putt: false,
-    shot_category: "Tee Shot",
     lie: getDefaultLieForShot(shotNumber),
     distance_to_flag: "",
-    shot_result: "Pured",
+    miss_pattern: "",
     penalty_type: "None",
   }
 }
@@ -46,15 +44,65 @@ export function calculateShotModeTotals(shots) {
   }
 }
 
+export function getShotSgCategory({ shot, shotIndex }) {
+  const startDistance = Number(shot.distance_to_flag)
+  const lie = shot.lie || ""
+  const APPROACH_THRESHOLD = 90
+
+  if (lie === "Green") return "Putting"
+  if (shotIndex === 0 && lie === "Tee") return "Tee"
+  if (lie === "Recovery") return "Recovery"
+
+  if (!Number.isFinite(startDistance)) return null
+
+  if (startDistance > APPROACH_THRESHOLD) {
+    if (lie === "Fairway") return "Approach + Fairway"
+    if (lie === "Rough") return "Approach + Rough"
+    if (lie === "Sand") return "Approach + Sand"
+    if (lie === "Tee") return "Tee"
+  }
+
+  if (startDistance <= APPROACH_THRESHOLD) {
+    if (lie === "Fairway") return "Short Game + Fairway"
+    if (lie === "Rough") return "Short Game + Rough"
+    if (lie === "Sand") return "Short Game + Sand"
+    if (lie === "Tee") return "Tee"
+  }
+
+  return null
+}
+
+export function getSgLookupKeyFromCategory(sgCategory) {
+  switch (sgCategory) {
+    case "Tee":
+      return "tee"
+    case "Approach + Fairway":
+    case "Short Game + Fairway":
+      return "fairway"
+    case "Approach + Rough":
+    case "Short Game + Rough":
+      return "rough"
+    case "Approach + Sand":
+    case "Short Game + Sand":
+      return "sand"
+    case "Recovery":
+      return "recovery"
+    case "Putting":
+      return "green"
+    default:
+      return null
+  }
+}
+
 export function inferHoleValuesFromShots(selectedPar, validShots) {
-  const firstPutt = validShots.find((s) => s.is_putt)
+  const firstPutt = validShots.find((s) => s.lie === "Green")
   const secondShot = validShots[1]
 
   const fairway =
-    selectedPar > 3 && secondShot ? !secondShot.is_putt && secondShot.lie === "Fairway" : null
+    selectedPar > 3 && secondShot ? secondShot.lie === "Fairway" : null
 
   const gir = firstPutt ? firstPutt.shot_number <= selectedPar - 1 : false
-  const putts = validShots.filter((s) => s.is_putt).length
+  const putts = validShots.filter((s) => s.lie === "Green").length
 
   return {
     fairway,
@@ -100,13 +148,13 @@ export function inferHoleMetrics(hole, holeShots) {
   }
 
   const shots = [...holeShots].sort((a, b) => a.shot_number - b.shot_number)
-  const firstPutt = shots.find((s) => s.is_putt)
-  const firstPuttIndex = shots.findIndex((s) => s.is_putt)
+  const firstPutt = shots.find((s) => s.lie === "Green")
+  const firstPuttIndex = shots.findIndex((s) => s.lie === "Green")
 
   let fairway = null
   if (par && par > 3 && shots.length >= 2) {
     const secondShot = shots[1]
-    fairway = !secondShot.is_putt && secondShot.lie === "Fairway"
+    fairway = secondShot.lie === "Fairway"
   }
 
   let gir = null
@@ -116,7 +164,7 @@ export function inferHoleMetrics(hole, holeShots) {
     gir = false
   }
 
-  const putts = shots.filter((s) => s.is_putt).length
+  const putts = shots.filter((s) => s.lie === "Green").length
 
   let drivingDistance = null
   if (
@@ -158,6 +206,34 @@ export function inferHoleMetrics(hole, holeShots) {
   }
 }
 
+function createEmptyMissPatternCounts() {
+  return {
+    long_left: 0,
+    long: 0,
+    long_right: 0,
+    left: 0,
+    spot_on: 0,
+    right: 0,
+    short_left: 0,
+    short: 0,
+    short_right: 0,
+  }
+}
+
+function createMissPatternByCategory() {
+  return {
+    "Tee": createEmptyMissPatternCounts(),
+    "Approach + Fairway": createEmptyMissPatternCounts(),
+    "Approach + Rough": createEmptyMissPatternCounts(),
+    "Approach + Sand": createEmptyMissPatternCounts(),
+    "Short Game + Fairway": createEmptyMissPatternCounts(),
+    "Short Game + Rough": createEmptyMissPatternCounts(),
+    "Short Game + Sand": createEmptyMissPatternCounts(),
+    "Recovery": createEmptyMissPatternCounts(),
+    "Putting": createEmptyMissPatternCounts(),
+  }
+}
+
 export function buildRoundAnalytics(holes, shots) {
   const playedHoles = holes.filter((h) => !h.skipped)
   const shotsByHole = groupShotsByHole(shots)
@@ -178,15 +254,8 @@ export function buildRoundAnalytics(holes, shots) {
   let par4Scores = []
   let par5Scores = []
 
-  const contactCounts = {
-    Pured: 0,
-    Draw: 0,
-    Fade: 0,
-    Hook: 0,
-    Slice: 0,
-    Duff: 0,
-    Top: 0,
-  }
+  const missPatternCounts = createEmptyMissPatternCounts()
+  const missPatternByCategory = createMissPatternByCategory()
 
   const perHole = playedHoles.map((hole) => {
     const holeShots = shotsByHole[hole.hole_number] || []
@@ -214,8 +283,17 @@ export function buildRoundAnalytics(holes, shots) {
     if (inferred.approachAccuracy !== null) approachValues.push(inferred.approachAccuracy)
 
     for (const shot of holeShots) {
-      if (!shot.is_putt && shot.shot_result && contactCounts[shot.shot_result] !== undefined) {
-        contactCounts[shot.shot_result] += 1
+      if (shot.miss_pattern && missPatternCounts[shot.miss_pattern] !== undefined) {
+        missPatternCounts[shot.miss_pattern] += 1
+      }
+
+      if (
+        shot.sg_category &&
+        missPatternByCategory[shot.sg_category] &&
+        shot.miss_pattern &&
+        missPatternByCategory[shot.sg_category][shot.miss_pattern] !== undefined
+      ) {
+        missPatternByCategory[shot.sg_category][shot.miss_pattern] += 1
       }
     }
 
@@ -241,8 +319,9 @@ export function buildRoundAnalytics(holes, shots) {
     girMisses: Math.max(0, girOpp - girHits),
     girOpp,
     girPct: girOpp > 0 ? ((girHits / girOpp) * 100).toFixed(1) : "0.0",
-    contactCounts,
-    contactTotal: Object.values(contactCounts).reduce((a, b) => a + b, 0),
+    missPatternCounts,
+    missPatternByCategory,
+    missPatternTotal: Object.values(missPatternCounts).reduce((a, b) => a + b, 0),
     avgDrive: avg(driveValues),
     avgApproach: avg(approachValues),
     avgPar3: avg(par3Scores),

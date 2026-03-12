@@ -15,56 +15,73 @@ function getNearestExpected(table, distance) {
     }
   }
 
-  return nearest.expected
+  return nearest.expectedShots
 }
 
-export function getShotSgCategory({ shot, shotIndex, holePar }) {
+export function getShotSgCategory({ shot, shotIndex }) {
   const startDistance = Number(shot.distance_to_flag)
+  const lie = shot.lie || ""
+  const APPROACH_THRESHOLD = 90
 
-  if (shot.is_putt || shot.lie === "Green") {
-    return "putting"
+  if (lie === "Green") return "Putting"
+  if (shotIndex === 0 && lie === "Tee") return "Tee"
+  if (lie === "Recovery") return "Recovery"
+
+  if (!Number.isFinite(startDistance)) return null
+
+  if (startDistance > APPROACH_THRESHOLD) {
+    if (lie === "Fairway") return "Approach + Fairway"
+    if (lie === "Rough") return "Approach + Rough"
+    if (lie === "Sand") return "Approach + Sand"
+    if (lie === "Tee") return "Tee"
   }
 
-  if (shotIndex === 0 && (holePar === 4 || holePar === 5)) {
-    return "tee"
-  }
-
-  if (startDistance > 90) {
-    return "approach"
-  }
-
-  return "shortGame"
-}
-
-export function getExpectedStrokesForShot({ shot, shotIndex, holePar }) {
-  const category = getShotSgCategory({ shot, shotIndex, holePar })
-  const distance = Number(shot.distance_to_flag)
-
-  if (category === "tee") {
-    return getNearestExpected(SG_TABLE.tee, distance)
-  }
-
-  if (category === "approach") {
-    return getNearestExpected(SG_TABLE.approach, distance)
-  }
-
-  if (category === "shortGame") {
-    return getNearestExpected(SG_TABLE.shortGame, distance)
-  }
-
-  if (category === "putting") {
-    return getNearestExpected(SG_TABLE.putting, distance)
+  if (startDistance <= APPROACH_THRESHOLD) {
+    if (lie === "Fairway") return "Short Game + Fairway"
+    if (lie === "Rough") return "Short Game + Rough"
+    if (lie === "Sand") return "Short Game + Sand"
+    if (lie === "Tee") return "Tee"
   }
 
   return null
 }
 
-export function evaluateHoleStrokesGained(validShots, holePar) {
+export function getSgLookupKeyFromCategory(sgCategory) {
+  switch (sgCategory) {
+    case "Tee":
+      return "tee"
+    case "Approach + Fairway":
+    case "Short Game + Fairway":
+      return "fairway"
+    case "Approach + Rough":
+    case "Short Game + Rough":
+      return "rough"
+    case "Approach + Sand":
+    case "Short Game + Sand":
+      return "sand"
+    case "Recovery":
+      return "recovery"
+    case "Putting":
+      return "green"
+    default:
+      return null
+  }
+}
+
+export function getExpectedStrokesForShot({ shot, shotIndex }) {
+  const category = getShotSgCategory({ shot, shotIndex })
+  const lookupKey = getSgLookupKeyFromCategory(category)
+  const distance = Number(shot.distance_to_flag)
+
+  if (!lookupKey) return null
+  return getNearestExpected(SG_TABLE[lookupKey], distance)
+}
+
+export function evaluateHoleStrokesGained(validShots) {
   return validShots.map((shot, index) => {
     const expectedBefore = getExpectedStrokesForShot({
       shot,
       shotIndex: index,
-      holePar,
     })
 
     let expectedAfter = 0
@@ -73,7 +90,6 @@ export function evaluateHoleStrokesGained(validShots, holePar) {
       expectedAfter = getExpectedStrokesForShot({
         shot: validShots[index + 1],
         shotIndex: index + 1,
-        holePar,
       })
     }
 
@@ -87,7 +103,6 @@ export function evaluateHoleStrokesGained(validShots, holePar) {
       sg_category: getShotSgCategory({
         shot,
         shotIndex: index,
-        holePar,
       }),
       expected_before: expectedBefore,
       expected_after: expectedAfter,
@@ -96,53 +111,44 @@ export function evaluateHoleStrokesGained(validShots, holePar) {
   })
 }
 
-export function summarizeHoleStrokesGained(evaluatedShots) {
-  return evaluatedShots.reduce(
-    (acc, shot) => {
-      const sg = Number(shot.strokes_gained)
-      if (!Number.isFinite(sg)) return acc
-
-      acc.total += sg
-
-      if (shot.sg_category === "tee") acc.tee += sg
-      if (shot.sg_category === "approach") acc.approach += sg
-      if (shot.sg_category === "shortGame") acc.shortGame += sg
-      if (shot.sg_category === "putting") acc.putting += sg
-
-      return acc
-    },
-    {
-      total: 0,
-      tee: 0,
-      approach: 0,
-      shortGame: 0,
-      putting: 0,
-    }
-  )
+function createDetailedSgSummary() {
+  return {
+    total: 0,
+    tee: 0,
+    approachFairway: 0,
+    approachRough: 0,
+    approachSand: 0,
+    shortGameFairway: 0,
+    shortGameRough: 0,
+    shortGameSand: 0,
+    recovery: 0,
+    green: 0,
+  }
 }
 
+function addShotToSummary(acc, shot) {
+  const sg = Number(shot.strokes_gained)
+  if (!Number.isFinite(sg)) return acc
+
+  acc.total += sg
+
+  if (shot.sg_category === "Tee") acc.tee += sg
+  if (shot.sg_category === "Approach + Fairway") acc.approachFairway += sg
+  if (shot.sg_category === "Approach + Rough") acc.approachRough += sg
+  if (shot.sg_category === "Approach + Sand") acc.approachSand += sg
+  if (shot.sg_category === "Short Game + Fairway") acc.shortGameFairway += sg
+  if (shot.sg_category === "Short Game + Rough") acc.shortGameRough += sg
+  if (shot.sg_category === "Short Game + Sand") acc.shortGameSand += sg
+  if (shot.sg_category === "Recovery") acc.recovery += sg
+  if (shot.sg_category === "Putting") acc.green += sg
+
+  return acc
+}
+
+export function summarizeHoleStrokesGained(evaluatedShots) {
+  return evaluatedShots.reduce(addShotToSummary, createDetailedSgSummary())
+}
 
 export function summarizeRoundStrokesGained(shots) {
-  return shots.reduce(
-    (acc, shot) => {
-      const sg = Number(shot.strokes_gained)
-      if (!Number.isFinite(sg)) return acc
-
-      acc.total += sg
-
-      if (shot.sg_category === "tee") acc.tee += sg
-      if (shot.sg_category === "approach") acc.approach += sg
-      if (shot.sg_category === "shortGame") acc.shortGame += sg
-      if (shot.sg_category === "putting") acc.putting += sg
-
-      return acc
-    },
-    {
-      total: 0,
-      tee: 0,
-      approach: 0,
-      shortGame: 0,
-      putting: 0,
-    }
-  )
+  return shots.reduce(addShotToSummary, createDetailedSgSummary())
 }
