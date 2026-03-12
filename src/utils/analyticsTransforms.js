@@ -36,32 +36,68 @@ function summarizeShotsForRound(shots) {
   return shots.reduce(addShotToDetailedSummary, createEmptySgSummary())
 }
 
-export function buildSgTimeline(rounds, shots) {
+function calculateSlope(values) {
+  const points = values
+    .map((y, x) => ({ x, y }))
+    .filter((p) => Number.isFinite(p.y))
+
+  if (points.length < 2) return null
+
+  const n = points.length
+  const sumX = points.reduce((s, p) => s + p.x, 0)
+  const sumY = points.reduce((s, p) => s + p.y, 0)
+  const sumXY = points.reduce((s, p) => s + p.x * p.y, 0)
+  const sumXX = points.reduce((s, p) => s + p.x * p.x, 0)
+
+  const denominator = n * sumXX - sumX * sumX
+  if (denominator === 0) return null
+
+  return (n * sumXY - sumX * sumY) / denominator
+}
+
+function calculateSlopes(data, keys) {
+  const result = {}
+  for (const key of keys) {
+    result[key] = calculateSlope(data.map((row) => row[key]))
+  }
+  return result
+}
+
+export function buildSgTimeline(rounds = [], shots = []) {
   const shotsByRound = {}
+
   for (const shot of shots) {
     if (!shotsByRound[shot.round_id]) shotsByRound[shot.round_id] = []
     shotsByRound[shot.round_id].push(shot)
   }
 
-  const timeline = rounds.map((round) => {
-    const roundShots = shotsByRound[round.id] || []
-    const summary = summarizeShotsForRound(roundShots)
+  const timeline = rounds
+    .map((round) => {
+      const roundShots = (shotsByRound[round.id] || []).filter((shot) =>
+        Number.isFinite(Number(shot.strokes_gained))
+      )
 
-    return {
-      date: round.date,
-      course: round.course,
-      tee: summary.tee,
-      approachFairway: summary.approachFairway,
-      approachRough: summary.approachRough,
-      approachSand: summary.approachSand,
-      shortGameFairway: summary.shortGameFairway,
-      shortGameRough: summary.shortGameRough,
-      shortGameSand: summary.shortGameSand,
-      recovery: summary.recovery,
-      green: summary.green,
-      total: summary.total,
-    }
-  })
+      if (roundShots.length === 0) return null
+
+      const summary = summarizeShotsForRound(roundShots)
+
+      return {
+        round_id: round.id,
+        date: round.date,
+        course: round.course,
+        tee: summary.tee,
+        approachFairway: summary.approachFairway,
+        approachRough: summary.approachRough,
+        approachSand: summary.approachSand,
+        shortGameFairway: summary.shortGameFairway,
+        shortGameRough: summary.shortGameRough,
+        shortGameSand: summary.shortGameSand,
+        recovery: summary.recovery,
+        green: summary.green,
+        total: summary.total,
+      }
+    })
+    .filter(Boolean)
 
   const slopes = calculateSlopes(timeline, [
     "tee",
@@ -179,29 +215,3 @@ export function buildMissPatternByCategoryFromShots(shots) {
   return grouped
 }
 
-function calculateSlope(values) {
-  const points = values
-    .map((y, x) => ({ x, y }))
-    .filter((p) => Number.isFinite(p.y))
-
-  if (points.length < 2) return null
-
-  const n = points.length
-  const sumX = points.reduce((s, p) => s + p.x, 0)
-  const sumY = points.reduce((s, p) => s + p.y, 0)
-  const sumXY = points.reduce((s, p) => s + p.x * p.y, 0)
-  const sumXX = points.reduce((s, p) => s + p.x * p.x, 0)
-
-  const denominator = n * sumXX - sumX * sumX
-  if (denominator === 0) return null
-
-  return (n * sumXY - sumX * sumY) / denominator
-}
-
-function calculateSlopes(data, keys) {
-  const result = {}
-  for (const key of keys) {
-    result[key] = calculateSlope(data.map((row) => row[key]))
-  }
-  return result
-}
