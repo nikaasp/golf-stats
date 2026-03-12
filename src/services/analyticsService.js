@@ -20,6 +20,18 @@ export async function fetchShotsForRoundIds(roundIds) {
 
   return supabase
     .from("shots")
-    .select("round_id, sg_category, strokes_gained")
+    .select("round_id, sg_category, strokes_gained, miss_pattern")
     .in("round_id", roundIds)
+}
+
+export async function fetchHolesForRoundIds(roundIds) {
+  if (!roundIds || roundIds.length === 0) {
+    return { data: [], error: null }
+  }
+
+  return supabase
+    .from("holes")
+    .select("*")
+    .in("round_id", roundIds)
+    .order("hole_number", { ascending: true })
 }

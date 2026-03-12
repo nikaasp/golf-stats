@@ -1,10 +1,38 @@
 import { useEffect, useMemo, useState } from "react"
 import SgLineChart from "./SgLineChart"
+import PercentLineChart from "./PercentLineChart"
+import PuttsLineChart from "./PuttsLineChart"
+import PieChart from "./PieChart"
 import {
   fetchRoundsForAnalytics,
   fetchShotsForRoundIds,
+  fetchHolesForRoundIds,
 } from "../services/analyticsService"
-import { buildSgTimeline } from "../utils/analyticsTransforms"
+import {
+  buildSgTimeline,
+  buildAccuracyTimeline,
+  buildPuttsTimeline,
+  buildMissPatternByCategoryFromShots,
+} from "../utils/analyticsTransforms"
+
+import {
+  MISS_PATTERN_LABELS,
+  MISS_PATTERN_ORDER,
+  MISS_PATTERN_COLORS,
+} from "../utils/missPatternConfig"
+
+
+const CATEGORY_LABELS = {
+  "Tee": "Off the tee",
+  "Approach + Fairway": "Approach (FW)",
+  "Approach + Rough": "Approach (RGH)",
+  "Approach + Sand": "Approach (SND)",
+  "Short Game + Fairway": "Short game (FW)",
+  "Short Game + Rough": "Short game (RGH)",
+  "Short Game + Sand": "Short game (SND)",
+  Recovery: "Recovery",
+  Putting: "On the green",
+}
 
 export default function AnalyticsScreen({
   courses,
@@ -20,6 +48,7 @@ export default function AnalyticsScreen({
 
   const [rounds, setRounds] = useState([])
   const [shots, setShots] = useState([])
+  const [holes, setHoles] = useState([])
 
   useEffect(() => {
     loadAnalytics()
@@ -44,7 +73,11 @@ export default function AnalyticsScreen({
     setRounds(roundsData)
 
     const roundIds = roundsData.map((r) => r.id)
-    const shotsRes = await fetchShotsForRoundIds(roundIds)
+
+    const [shotsRes, holesRes] = await Promise.all([
+      fetchShotsForRoundIds(roundIds),
+      fetchHolesForRoundIds(roundIds),
+    ])
 
     setLoading(false)
 
@@ -53,20 +86,60 @@ export default function AnalyticsScreen({
       return
     }
 
+    if (holesRes.error) {
+      alert("Could not load analytics holes: " + holesRes.error.message)
+      return
+    }
+
     setShots(shotsRes.data || [])
+    setHoles(holesRes.data || [])
   }
 
   const { timeline, slopes } = useMemo(
-  () => buildSgTimeline(rounds, shots),
-  [rounds, shots]
+    () => buildSgTimeline(rounds, shots),
+    [rounds, shots]
   )
+
+  const accuracyTimeline = useMemo(
+    () => buildAccuracyTimeline(rounds, holes),
+    [rounds, holes]
+  )
+
+  const puttsTimeline = useMemo(
+    () => buildPuttsTimeline(rounds, holes),
+    [rounds, holes]
+  )
+
+  const missPatternCharts = useMemo(() => {
+    const grouped = buildMissPatternByCategoryFromShots(shots)
+
+    return Object.entries(grouped)
+      .map(([categoryKey, counts]) => ({
+        key: categoryKey,
+        title: CATEGORY_LABELS[categoryKey] || categoryKey,
+        data: MISS_PATTERN_ORDER
+          .map((key) => ({
+            key,
+            value: counts[key] || 0,
+          }))
+          .filter((d) => d.value > 0)
+          .map((d) => ({
+            label: MISS_PATTERN_LABELS[d.key],
+            value: d.value,
+            color: MISS_PATTERN_COLORS[d.key],
+          })),
+      }))
+      .filter((chart) => chart.data.length > 0)
+  }, [shots])
 
   return (
     <div style={styles.page}>
       <div style={styles.mobileShell}>
         <div style={styles.sectionCard}>
           <h1 style={styles.heroTitle}>Analytics</h1>
-          <p style={styles.mutedText}>Filter your rounds and view strokes gained over time.</p>
+          <p style={styles.mutedText}>
+            Filter your rounds and view strokes gained, accuracy, putts, and miss patterns over time.
+          </p>
 
           <label style={styles.label}>Start date</label>
           <input
@@ -104,6 +177,28 @@ export default function AnalyticsScreen({
         </div>
 
         <SgLineChart data={timeline} slopes={slopes} styles={styles} />
+        <PercentLineChart data={accuracyTimeline} styles={styles} />
+        <PuttsLineChart data={puttsTimeline} styles={styles} />
+
+        {missPatternCharts.length > 0 && (
+          <div style={styles.sectionCard}>
+            <h2 style={styles.sectionTitle}>Miss Patterns by Category</h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gap: "12px",
+              }}
+            >
+              {missPatternCharts.map((chart) => (
+                <div key={chart.key} style={{ minWidth: 0 }}>
+                  <PieChart title={chart.title} data={chart.data} styles={styles} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <button style={styles.primaryButton} onClick={goHome}>
           Back to Home

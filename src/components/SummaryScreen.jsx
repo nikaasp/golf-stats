@@ -3,17 +3,13 @@ import PieChart from "./PieChart"
 import Scorecard from "./Scorecard"
 import { formatToPar } from "../utils/golfFormatters"
 
-const MISS_PATTERN_LABELS = {
-  long_left: "Long Left",
-  long: "Long",
-  long_right: "Long Right",
-  left: "Left",
-  spot_on: "Spot On!",
-  right: "Right",
-  short_left: "Short Left",
-  short: "Short",
-  short_right: "Short Right",
-}
+import {
+  MISS_PATTERN_LABELS,
+  MISS_PATTERN_ORDER,
+  MISS_PATTERN_COLORS,
+} from "../utils/missPatternConfig"
+
+
 
 const CATEGORY_LABELS = {
   "Tee": "Off the tee",
@@ -65,13 +61,19 @@ export default function SummaryScreen({
   ]
 
   const buildMissPatternChart = (counts) =>
-    Object.entries(counts || {})
-      .filter(([, value]) => value > 0)
-      .map(([key, value], idx) => ({
-        label: MISS_PATTERN_LABELS[key] || key,
-        value,
-        color: PIE_COLORS[idx % PIE_COLORS.length],
+    MISS_PATTERN_ORDER
+      .map((key) => ({
+        key,
+        value: counts[key] || 0,
       }))
+      .filter((d) => d.value > 0)
+      .map((d) => ({
+        label: MISS_PATTERN_LABELS[d.key],
+        value: d.value,
+        color: MISS_PATTERN_COLORS[d.key],
+      }))    
+
+
 
   const missPatternCharts = Object.entries(summary.missPatternByCategory || {})
     .map(([categoryKey, counts]) => ({

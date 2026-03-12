@@ -1,3 +1,5 @@
+import { useMemo, useState } from "react"
+
 function formatDateLabel(dateStr) {
   if (!dateStr) return ""
   const d = new Date(dateStr)
@@ -5,18 +7,67 @@ function formatDateLabel(dateStr) {
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" })
 }
 
+function formatSlope(value) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return "0.000"
+  return numericValue.toFixed(3)
+}
+
+const SERIES = [
+  { key: "total", label: "Total", color: "#111827", locked: true },
+  { key: "tee", label: "Off the tee", color: "#2563eb" },
+  { key: "approachFairway", label: "App (FW)", color: "#16a34a" },
+  { key: "approachRough", label: "App (RGH)", color: "#22c55e" },
+  { key: "approachSand", label: "App (SND)", color: "#84cc16" },
+  { key: "shortGameFairway", label: "SG (FW)", color: "#f59e0b" },
+  { key: "shortGameRough", label: "SG (RGH)", color: "#f97316" },
+  { key: "shortGameSand", label: "SG (SND)", color: "#ea580c" },
+  { key: "recovery", label: "Recovery", color: "#ef4444" },
+  { key: "green", label: "On green", color: "#7c3aed" },
+]
+
 export default function SgLineChart({ data, slopes, styles }) {
   const width = 360
-  const height = 220
+  const height = 240
   const padding = { top: 20, right: 16, bottom: 32, left: 42 }
 
-  const series = [
-    { key: "total", label: "Total", color: "#111827" },
-    { key: "tee", label: "Tee", color: "#2563eb" },
-    { key: "approach", label: "Approach", color: "#16a34a" },
-    { key: "shortGame", label: "Short game", color: "#f59e0b" },
-    { key: "putting", label: "Putting", color: "#7c3aed" },
-  ]
+  const [visibleKeys, setVisibleKeys] = useState(() =>
+    new Set(SERIES.map((s) => s.key))
+  )
+
+  const visibleSeries = useMemo(
+    () => SERIES.filter((s) => visibleKeys.has(s.key)),
+    [visibleKeys]
+  )
+
+  const nonLockedVisibleCount = SERIES.filter(
+    (s) => !s.locked && visibleKeys.has(s.key)
+  ).length
+
+  const toggleSeries = (key, locked = false) => {
+    if (locked) return
+
+    setVisibleKeys((prev) => {
+      const next = new Set(prev)
+
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+
+      next.add("total")
+      return next
+    })
+  }
+
+  const showAll = () => {
+    setVisibleKeys(new Set(SERIES.map((s) => s.key)))
+  }
+
+  const showOnlyTotal = () => {
+    setVisibleKeys(new Set(["total"]))
+  }
 
   if (!data || data.length === 0) {
     return (
@@ -28,7 +79,7 @@ export default function SgLineChart({ data, slopes, styles }) {
   }
 
   const allValues = data.flatMap((row) =>
-    series.map((s) => Number(row[s.key] ?? 0))
+    visibleSeries.map((s) => Number(row[s.key] ?? 0))
   )
 
   const rawMin = Math.min(...allValues, 0)
@@ -53,21 +104,52 @@ export default function SgLineChart({ data, slopes, styles }) {
     <div style={styles.sectionCard}>
       <h2 style={styles.sectionTitle}>Strokes Gained Over Time</h2>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
-        {series.map((s) => (
-          <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-            <span
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <button
+          type="button"
+          style={styles.secondaryAction || styles.primaryButton}
+          onClick={showAll}
+        >
+          Show all
+        </button>
+
+        <button
+          type="button"
+          style={styles.secondaryAction || styles.primaryButton}
+          onClick={showOnlyTotal}
+          disabled={nonLockedVisibleCount === 0}
+        >
+          Only total
+        </button>
+      </div>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+        {SERIES.map((s) => {
+          const active = visibleKeys.has(s.key)
+
+          return (
+            <button
+              key={s.key}
+              type="button"
+              onClick={() => toggleSeries(s.key, s.locked)}
+              disabled={s.locked}
+              title={s.locked ? "Total is always shown" : `Toggle ${s.label}`}
               style={{
-                width: 12,
-                height: 12,
+                border: `1px solid ${s.color}`,
+                background: active ? s.color : "#fff",
+                color: active ? "#fff" : s.color,
                 borderRadius: 999,
-                background: s.color,
-                display: "inline-block",
+                padding: "6px 10px",
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: s.locked ? "default" : "pointer",
+                opacity: s.locked ? 0.95 : 1,
               }}
-            />
-            <span>{s.label} ({slopes ? slopes[s.key].toFixed(3) : "0.000"})</span>
-          </div>
-        ))}
+            >
+              {s.label} ({formatSlope(slopes?.[s.key])})
+            </button>
+          )
+        })}
       </div>
 
       <svg
@@ -108,7 +190,7 @@ export default function SgLineChart({ data, slopes, styles }) {
           stroke="#9ca3af"
         />
 
-        {series.map((s) => {
+        {visibleSeries.map((s) => {
           const points = data
             .map((row, i) => `${xForIndex(i)},${yForValue(Number(row[s.key] ?? 0))}`)
             .join(" ")
@@ -118,15 +200,15 @@ export default function SgLineChart({ data, slopes, styles }) {
               <polyline
                 fill="none"
                 stroke={s.color}
-                strokeWidth="2.5"
+                strokeWidth={s.key === "total" ? "2.8" : "2.2"}
                 points={points}
               />
               {data.map((row, i) => (
                 <circle
-                  key={`${s.key}-${row.round_id}`}
+                  key={`${s.key}-${row.round_id || row.date || i}`}
                   cx={xForIndex(i)}
                   cy={yForValue(Number(row[s.key] ?? 0))}
-                  r="2.7"
+                  r={s.key === "total" ? "2.8" : "2.3"}
                   fill={s.color}
                 />
               ))}
@@ -136,7 +218,7 @@ export default function SgLineChart({ data, slopes, styles }) {
 
         {data.map((row, i) => (
           <text
-            key={row.round_id}
+            key={row.round_id || `${row.date}-${i}`}
             x={xForIndex(i)}
             y={height - 8}
             textAnchor="middle"
