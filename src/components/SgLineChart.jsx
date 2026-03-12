@@ -13,6 +13,36 @@ function formatSlope(value) {
   return numericValue.toFixed(3)
 }
 
+function getFiniteNumber(value) {
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : null
+}
+
+function buildPolylineSegments(data, key, xForIndex, yForValue) {
+  const segments = []
+  let currentSegment = []
+
+  data.forEach((row, i) => {
+    const value = getFiniteNumber(row[key])
+
+    if (value === null) {
+      if (currentSegment.length > 0) {
+        segments.push(currentSegment)
+        currentSegment = []
+      }
+      return
+    }
+
+    currentSegment.push(`${xForIndex(i)},${yForValue(value)}`)
+  })
+
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment)
+  }
+
+  return segments
+}
+
 const SERIES = [
   { key: "total", label: "Total", color: "#111827", locked: true },
   { key: "tee", label: "Off the tee", color: "#2563eb" },
@@ -79,8 +109,39 @@ export default function SgLineChart({ data, slopes, styles }) {
   }
 
   const allValues = data.flatMap((row) =>
-    visibleSeries.map((s) => Number(row[s.key] ?? 0))
+    visibleSeries
+      .map((s) => getFiniteNumber(row[s.key]))
+      .filter((v) => v !== null)
   )
+
+  if (allValues.length === 0) {
+    return (
+      <div style={styles.sectionCard}>
+        <h2 style={styles.sectionTitle}>Strokes Gained Over Time</h2>
+
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+          <button
+            type="button"
+            style={styles.secondaryAction || styles.primaryButton}
+            onClick={showAll}
+          >
+            Show all
+          </button>
+
+          <button
+            type="button"
+            style={styles.secondaryAction || styles.primaryButton}
+            onClick={showOnlyTotal}
+            disabled={nonLockedVisibleCount === 0}
+          >
+            Only total
+          </button>
+        </div>
+
+        <p style={styles.mutedText}>No strokes gained data available for the visible categories.</p>
+      </div>
+    )
+  }
 
   const rawMin = Math.min(...allValues, 0)
   const rawMax = Math.max(...allValues, 0)
@@ -191,27 +252,36 @@ export default function SgLineChart({ data, slopes, styles }) {
         />
 
         {visibleSeries.map((s) => {
-          const points = data
-            .map((row, i) => `${xForIndex(i)},${yForValue(Number(row[s.key] ?? 0))}`)
-            .join(" ")
+          const segments = buildPolylineSegments(data, s.key, xForIndex, yForValue)
+
+          if (segments.length === 0) return null
 
           return (
             <g key={s.key}>
-              <polyline
-                fill="none"
-                stroke={s.color}
-                strokeWidth={s.key === "total" ? "2.8" : "2.2"}
-                points={points}
-              />
-              {data.map((row, i) => (
-                <circle
-                  key={`${s.key}-${row.round_id || row.date || i}`}
-                  cx={xForIndex(i)}
-                  cy={yForValue(Number(row[s.key] ?? 0))}
-                  r={s.key === "total" ? "2.8" : "2.3"}
-                  fill={s.color}
+              {segments.map((segment, segmentIndex) => (
+                <polyline
+                  key={`${s.key}-segment-${segmentIndex}`}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth={s.key === "total" ? "2.8" : "2.2"}
+                  points={segment.join(" ")}
                 />
               ))}
+
+              {data.map((row, i) => {
+                const value = getFiniteNumber(row[s.key])
+                if (value === null) return null
+
+                return (
+                  <circle
+                    key={`${s.key}-${row.round_id || row.date || i}`}
+                    cx={xForIndex(i)}
+                    cy={yForValue(value)}
+                    r={s.key === "total" ? "2.8" : "2.3"}
+                    fill={s.color}
+                  />
+                )
+              })}
             </g>
           )
         })}

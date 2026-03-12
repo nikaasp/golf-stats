@@ -63,6 +63,10 @@ function calculateSlopes(data, keys) {
   return result
 }
 
+function nullIfEffectivelyZero(value, epsilon = 1e-9) {
+  return Math.abs(value) < epsilon ? null : value
+}
+
 export function buildSgTimeline(rounds = [], shots = []) {
   const shotsByRound = {}
 
@@ -85,15 +89,15 @@ export function buildSgTimeline(rounds = [], shots = []) {
         round_id: round.id,
         date: round.date,
         course: round.course,
-        tee: summary.tee,
-        approachFairway: summary.approachFairway,
-        approachRough: summary.approachRough,
-        approachSand: summary.approachSand,
-        shortGameFairway: summary.shortGameFairway,
-        shortGameRough: summary.shortGameRough,
-        shortGameSand: summary.shortGameSand,
-        recovery: summary.recovery,
-        green: summary.green,
+        tee: nullIfEffectivelyZero(summary.tee),
+        approachFairway: nullIfEffectivelyZero(summary.approachFairway),
+        approachRough: nullIfEffectivelyZero(summary.approachRough),
+        approachSand: nullIfEffectivelyZero(summary.approachSand),
+        shortGameFairway: nullIfEffectivelyZero(summary.shortGameFairway),
+        shortGameRough: nullIfEffectivelyZero(summary.shortGameRough),
+        shortGameSand: nullIfEffectivelyZero(summary.shortGameSand),
+        recovery: nullIfEffectivelyZero(summary.recovery),
+        green: nullIfEffectivelyZero(summary.green),
         total: summary.total,
       }
     })
@@ -188,7 +192,7 @@ function createEmptyMissPatternCounts() {
   }
 }
 
-export function buildMissPatternByCategoryFromShots(shots) {
+export function buildMissPatternByCategoryFromShots(shots = []) {
   const grouped = {
     "Tee": createEmptyMissPatternCounts(),
     "Approach + Fairway": createEmptyMissPatternCounts(),
@@ -214,4 +218,3 @@ export function buildMissPatternByCategoryFromShots(shots) {
 
   return grouped
 }
-
