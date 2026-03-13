@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import DistancePicker from "./DistancePicker"
 import { getPenaltyFromType } from "../utils/analytics"
 
@@ -27,6 +28,10 @@ const PENALTY_OPTIONS = [
   { value: "OB", label: "OB (+2)" },
 ]
 
+function hasEmptyDistance(value) {
+  return value === null || value === undefined || value === ""
+}
+
 export default function ShotCard({
   shot,
   index,
@@ -35,10 +40,28 @@ export default function ShotCard({
   updateShot,
   removeShotCard,
   styles,
+  holeLength,
 }) {
+  useEffect(() => {
+    const isFirstShot = index === 0
+    const holeLengthNumber = Number(holeLength)
+
+    if (
+      isFirstShot &&
+      hasEmptyDistance(shot.distance_to_flag) &&
+      Number.isFinite(holeLengthNumber) &&
+      holeLengthNumber > 0
+    ) {
+      updateShot(index, "distance_to_flag", holeLengthNumber)
+    }
+  }, [index, holeLength, shot.distance_to_flag, updateShot])
+
   const handleFieldChange = (field, value) => {
     updateShot(index, field, value)
   }
+
+  const showHoleLengthHint =
+    index === 0 && Number.isFinite(Number(holeLength)) && Number(holeLength) > 0
 
   return (
     <div
@@ -90,7 +113,23 @@ export default function ShotCard({
         ))}
       </div>
 
-      <label style={styles.label}>Distance to target</label>
+      <label style={styles.label}>
+        Distance to target
+        {showHoleLengthHint && (
+          <span
+            style={{
+              fontSize: "11px",
+              color: "#6b7280",
+              marginLeft: "6px",
+              fontWeight: 400,
+            }}
+          >
+            (auto-filled from hole length)
+          </span>
+        )}
+        {console.log("ShotCard holeLength:", holeLength, "index:", index)}
+      </label>
+
       <DistancePicker
         value={shot.distance_to_flag}
         onChange={(value) => handleFieldChange("distance_to_flag", value)}

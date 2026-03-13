@@ -1,5 +1,15 @@
 import { SG_TABLE } from "./strokesGainedTable"
 
+function normalizeLie(lie) {
+  const value = String(lie || "").trim()
+
+  if (value === "Green" || value === "On green" || value === "Putting") {
+    return "Green"
+  }
+
+  return value
+}
+
 function getNearestExpected(table, distance) {
   if (!Number.isFinite(distance)) return null
   if (!table || table.length === 0) return null
@@ -20,10 +30,10 @@ function getNearestExpected(table, distance) {
 
 export function getShotSgCategory({ shot, shotIndex }) {
   const startDistance = Number(shot.distance_to_flag)
-  const lie = shot.lie || ""
+  const lie = normalizeLie(shot.lie)
   const APPROACH_THRESHOLD = 90
 
-  if (lie === "Green") return "Putting"
+  if (lie === "Green") return "On green"
   if (shotIndex === 0 && lie === "Tee") return "Tee"
   if (lie === "Recovery") return "Recovery"
 
@@ -61,6 +71,7 @@ export function getSgLookupKeyFromCategory(sgCategory) {
       return "sand"
     case "Recovery":
       return "recovery"
+    case "On green":
     case "Putting":
       return "green"
     default:
@@ -140,7 +151,7 @@ function addShotToSummary(acc, shot) {
   if (shot.sg_category === "Short Game + Rough") acc.shortGameRough += sg
   if (shot.sg_category === "Short Game + Sand") acc.shortGameSand += sg
   if (shot.sg_category === "Recovery") acc.recovery += sg
-  if (shot.sg_category === "Putting") acc.green += sg
+  if (shot.sg_category === "On green" || shot.sg_category === "Putting") acc.green += sg
 
   return acc
 }

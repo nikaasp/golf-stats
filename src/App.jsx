@@ -23,7 +23,7 @@ import { styles } from "./utils/styles"
 
 import {
   evaluateHoleStrokesGained,
-  summarizeRoundStrokesGained
+  summarizeRoundStrokesGained,
 } from "./utils/strokesGained"
 
 import {
@@ -45,6 +45,38 @@ import {
 
 import { insertHole, insertSkippedHole } from "./services/holesService"
 import { insertShots } from "./services/shotsService"
+
+function getHoleLengthFromShots(validShots = []) {
+  if (!Array.isArray(validShots) || validShots.length === 0) return null
+
+  const firstShot =
+    validShots.find((shot) => Number(shot.shot_number) === 1) || validShots[0]
+  const distance = Number(firstShot?.distance_to_flag)
+
+  return Number.isFinite(distance) && distance > 0 ? distance : null
+}
+
+function mergeHoleData(existing = [], incomingHole) {
+  const existingArray = Array.isArray(existing) ? existing : []
+  const holeNumber = Number(incomingHole?.hole)
+
+  if (!Number.isInteger(holeNumber) || holeNumber < 1 || holeNumber > 18) {
+    return existingArray
+  }
+
+  const existingEntry = existingArray.find((h) => Number(h?.hole) === holeNumber)
+
+  const mergedEntry = {
+    hole: holeNumber,
+    par: incomingHole?.par ?? existingEntry?.par ?? null,
+    length_m: incomingHole?.length_m ?? existingEntry?.length_m ?? null,
+  }
+
+  return [
+    ...existingArray.filter((h) => Number(h?.hole) !== holeNumber),
+    mergedEntry,
+  ].sort((a, b) => a.hole - b.hole)
+}
 
 function App() {
   const [session, setSession] = useState(null)
@@ -140,9 +172,9 @@ function App() {
     if (isNewCourse) return
     if (!selectedCourseData?.hole_pars?.length) return
 
-    const holeData = selectedCourseData.hole_pars.find((h) => h.hole === hole)
+    const holeData = selectedCourseData.hole_pars.find((h) => Number(h.hole) === Number(hole))
     if (holeData) {
-      setPar(String(holeData.par))
+      setPar(holeData.par != null ? String(holeData.par) : "")
     } else {
       setPar("")
     }
@@ -184,6 +216,22 @@ function App() {
     setSelectedReviewHoles(bundle.holesRes.data || [])
     setSelectedReviewShots(bundle.shotsRes.data || [])
     setScreen("review")
+  }
+
+  function buildCurrentHoleCourseData(baseData = newCoursePars) {
+    const parValue = par === "" ? null : parseInt(par, 10)
+    if (parValue === null || Number.isNaN(parValue)) return baseData
+
+    let holeLength = null
+    if (entryMode === "shot_by_shot") {
+      holeLength = getHoleLengthFromShots(getValidShots(shots))
+    }
+
+    return mergeHoleData(baseData, {
+      hole,
+      par: parValue,
+      length_m: holeLength,
+    })
   }
 
   async function startRound() {
@@ -233,8 +281,8 @@ function App() {
     setRoundShots([])
 
     if (!isNewCourse && selectedCourseData?.hole_pars?.length) {
-      const hole1 = selectedCourseData.hole_pars.find((h) => h.hole === 1)
-      setPar(hole1 ? String(hole1.par) : "")
+      const hole1 = selectedCourseData.hole_pars.find((h) => Number(h.hole) === 1)
+      setPar(hole1?.par != null ? String(hole1.par) : "")
     } else {
       setPar("")
     }
@@ -291,20 +339,20 @@ function App() {
   }
 
   function updateShot(index, field, value) {
-  setShots((prev) =>
-    prev.map((shot, i) => {
-      if (i !== index) return shot
-      return { ...shot, [field]: value }
-    })
-  )
+    setShots((prev) =>
+      prev.map((shot, i) => {
+        if (i !== index) return shot
+        return { ...shot, [field]: value }
+      })
+    )
 
-  setActiveShotIndex(index)
+    setActiveShotIndex(index)
   }
 
   async function finishRound(finalCoursePars = null) {
-    const parsToSave = finalCoursePars || newCoursePars
+    const parsToSave = Array.isArray(finalCoursePars) ? finalCoursePars : newCoursePars
 
-    if (isNewCourse && session?.user && course.trim() && parsToSave.length > 0) {
+    if (session?.user && course.trim() && parsToSave.length > 0) {
       const normalizedName = course.trim()
 
       const existingCourseRes = await findCourseByName(session.user.id, normalizedName)
@@ -314,15 +362,27 @@ function App() {
       } else {
         const existingCourse = existingCourseRes.data?.[0]
 
+        let mergedHoleData = parsToSave
+
+        if (existingCourse?.hole_pars?.length) {
+          mergedHoleData = [...existingCourse.hole_pars]
+
+          for (const item of parsToSave) {
+            mergedHoleData = mergeHoleData(mergedHoleData, item)
+          }
+        }
+
         if (existingCourse) {
           const updateRes = await updateCourseById(existingCourse.id, {
             name: normalizedName,
-            hole_pars: parsToSave,
+            hole_pars: mergedHoleData,
             last_played_at: new Date().toISOString(),
           })
 
           if (updateRes.error) {
-            alert("Round saved, but existing course could not be updated: " + updateRes.error.message)
+            alert(
+              "Round saved, but existing course could not be updated: " + updateRes.error.message
+            )
           } else if (roundId) {
             await updateRoundCourse(roundId, existingCourse.id)
           }
@@ -330,7 +390,7 @@ function App() {
           const { data: courseData, error: courseError } = await createCourse({
             user_id: session.user.id,
             name: normalizedName,
-            hole_pars: parsToSave,
+            hole_pars: mergedHoleData,
             last_played_at: new Date().toISOString(),
           })
 
@@ -375,12 +435,12 @@ function App() {
     const puttsValue = putts === "" ? 2 : parseInt(putts, 10)
     const penaltyValue = penalty === "" ? 0 : parseInt(penalty, 10)
 
-    if (isNewCourse) {
-      setNewCoursePars((prev) => {
-        const filtered = prev.filter((h) => h.hole !== hole)
-        return [...filtered, { hole, par: parValue }].sort((a, b) => a.hole - b.hole)
+    setNewCoursePars((prev) =>
+      mergeHoleData(prev, {
+        hole,
+        par: parValue,
       })
-    }
+    )
 
     setLoading(true)
 
@@ -427,12 +487,15 @@ function App() {
       return false
     }
 
-    if (isNewCourse) {
-      setNewCoursePars((prev) => {
-        const filtered = prev.filter((h) => h.hole !== hole)
-        return [...filtered, { hole, par: selectedPar }].sort((a, b) => a.hole - b.hole)
+    const holeLength = getHoleLengthFromShots(validShots)
+
+    setNewCoursePars((prev) =>
+      mergeHoleData(prev, {
+        hole,
+        par: selectedPar,
+        length_m: holeLength,
       })
-    }
+    )
 
     const totals = calculateShotModeTotals(shots)
     const inferred = inferHoleValuesFromShots(selectedPar, validShots)
@@ -498,26 +561,18 @@ function App() {
     }
 
     let ok = false
-    let parForThisHole = null
 
     if (entryMode === "score") {
-      parForThisHole = par === "" ? null : parseInt(par, 10)
       ok = await saveScoreHole()
     }
 
     if (entryMode === "shot_by_shot") {
-      parForThisHole = par === "" ? null : parseInt(par, 10)
       ok = await saveShotByShotHole()
     }
 
     if (!ok) return
 
-    const finalPars =
-      isNewCourse && parForThisHole !== null
-        ? [...newCoursePars.filter((h) => h.hole !== hole), { hole, par: parForThisHole }].sort(
-            (a, b) => a.hole - b.hole
-          )
-        : newCoursePars
+    const finalPars = buildCurrentHoleCourseData(newCoursePars)
 
     if (hole >= 18) {
       resetHoleInputs()
@@ -525,6 +580,7 @@ function App() {
       return
     }
 
+    setNewCoursePars(finalPars)
     setHole(hole + 1)
     resetHoleInputs()
   }
@@ -609,8 +665,10 @@ function App() {
 
     if (!ok) return
 
+    const finalPars = buildCurrentHoleCourseData(newCoursePars)
+
     resetHoleInputs()
-    await finishRound()
+    await finishRound(finalPars)
   }
 
   async function deleteRound(round) {
@@ -779,6 +837,7 @@ function App() {
       <div className="app-shell">
         <ReviewRoundScreen
           selectedReviewRound={selectedReviewRound}
+          selectedReviewShots={selectedReviewShots}
           reviewSummary={reviewSummary}
           reviewSgSummary={reviewSgSummary}
           deleteRound={deleteRound}
@@ -793,7 +852,7 @@ function App() {
   return (
     <div className="app-shell">
       <PlayRoundScreen
-        course={course}
+        course={selectedCourseData || course}
         date={date}
         hole={hole}
         par={par}

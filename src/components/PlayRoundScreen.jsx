@@ -1,6 +1,29 @@
 import ToggleCard from "./ToggleCard"
 import ShotCard from "./ShotCard"
 
+function getCourseName(course) {
+  if (typeof course === "string") return course
+  if (course && typeof course === "object" && course.name) return course.name
+  return ""
+}
+
+function getHoleLengthFromCourse(course, holeNumber) {
+  if (!course || typeof course !== "object") return null
+
+  const holePars = Array.isArray(course.hole_pars) ? course.hole_pars : []
+  const match = holePars.find((item) => Number(item?.hole) === Number(holeNumber))
+
+  if (!match) return null
+
+  const length =
+    match?.length_m ??
+    match?.length ??
+    null
+
+  const numericLength = Number(length)
+  return Number.isFinite(numericLength) && numericLength > 0 ? numericLength : null
+}
+
 export default function PlayRoundScreen({
   course,
   date,
@@ -32,6 +55,7 @@ export default function PlayRoundScreen({
   goHomeAndReset,
   loading,
   styles,
+  holeLengthMap, // optional extra prop if parent has already built one
 }) {
   const asNumber = (value, fallback) => {
     const parsed = Number(value)
@@ -41,6 +65,20 @@ export default function PlayRoundScreen({
   const scoreValue = score === "" ? asNumber(par, 0) : asNumber(score, asNumber(par, 0))
   const puttsValue = putts === "" ? 2 : asNumber(putts, 2)
   const penaltyValue = penalty === "" ? 0 : asNumber(penalty, 0)
+
+  const currentHole = asNumber(hole, 1)
+  const totalHoles =
+    Array.isArray(course?.hole_pars) && course.hole_pars.length > 0
+      ? course.hole_pars.length
+      : 18
+
+  const currentHoleLengthFromMap = holeLengthMap?.[currentHole]
+  const currentHoleLength =
+    Number.isFinite(Number(currentHoleLengthFromMap)) && Number(currentHoleLengthFromMap) > 0
+      ? Number(currentHoleLengthFromMap)
+      : getHoleLengthFromCourse(course, currentHole)
+
+  const courseName = getCourseName(course)
 
   const bumpValue = (setter, currentValue, delta, min = 0) => {
     setter(String(Math.max(min, currentValue + delta)))
@@ -82,21 +120,29 @@ export default function PlayRoundScreen({
     </div>
   )
 
+console.log("PlayRoundScreen course prop:", course)
+console.log("PlayRoundScreen hole_pars:", course?.hole_pars)
+console.log("PlayRoundScreen currentHole:", currentHole)
+console.log("PlayRoundScreen currentHoleLength:", currentHoleLength)
+
   return (
     <div style={styles.page}>
       <div style={styles.mobileShell}>
-        {/* Header */}
         <div style={styles.sectionCard}>
           <div style={styles.playHeader}>
             <div>
-              <div style={styles.playCourse}>{course}</div>
+              <div style={styles.playCourse}>{courseName}</div>
               <div style={styles.playDate}>{date}</div>
             </div>
 
-            <div style={styles.holeCounter}>Hole {hole}/18</div>
+            <div style={styles.holeBadge}>
+              Hole {currentHole}/{totalHoles}
+              {Number.isFinite(Number(currentHoleLength)) && Number(currentHoleLength) > 0
+                ? ` • ${Number(currentHoleLength)} m`
+                : ""}
+            </div>
           </div>
 
-          {/* Par */}
           <label style={styles.label}>Par</label>
 
           <div style={styles.parRow}>
@@ -115,7 +161,6 @@ export default function PlayRoundScreen({
             ))}
           </div>
 
-          {/* Mode */}
           <label style={styles.label}>How do you want to log this hole?</label>
 
           <div style={styles.segmentedWrap}>
@@ -143,7 +188,6 @@ export default function PlayRoundScreen({
           </div>
         </div>
 
-        {/* SCORE MODE */}
         {entryMode === "score" && (
           <div style={styles.sectionCard}>
             <h2 style={styles.sectionTitle}>Score Mode</h2>
@@ -187,7 +231,6 @@ export default function PlayRoundScreen({
           </div>
         )}
 
-        {/* SHOT MODE */}
         {entryMode === "shot_by_shot" && (
           <div style={styles.sectionCard}>
             <h2 style={styles.sectionTitle}>Shot-by-Shot</h2>
@@ -203,6 +246,7 @@ export default function PlayRoundScreen({
                   updateShot={updateShot}
                   removeShotCard={removeShotCard}
                   styles={styles}
+                  holeLength={currentHoleLength}
                 />
               ))}
             </div>
@@ -234,14 +278,13 @@ export default function PlayRoundScreen({
           </div>
         )}
 
-        {/* ACTION BAR */}
         <div style={styles.bottomActionBar}>
           <button
             style={styles.primaryAction}
             onClick={saveHole}
             disabled={loading}
           >
-            {hole === 18 ? "Save & Finish" : "Save Hole"}
+            {currentHole === totalHoles ? "Save & Finish" : "Save Hole"}
           </button>
 
           <div style={styles.secondaryActionsRow}>

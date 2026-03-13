@@ -1,39 +1,67 @@
 function createEmptySgSummary() {
   return {
-    total: 0,
-    tee: 0,
-    approachFairway: 0,
-    approachRough: 0,
-    approachSand: 0,
-    shortGameFairway: 0,
-    shortGameRough: 0,
-    shortGameSand: 0,
-    recovery: 0,
-    green: 0,
+    total: { value: 0, count: 0 },
+    tee: { value: 0, count: 0 },
+    approachFairway: { value: 0, count: 0 },
+    approachRough: { value: 0, count: 0 },
+    approachSand: { value: 0, count: 0 },
+    shortGameFairway: { value: 0, count: 0 },
+    shortGameRough: { value: 0, count: 0 },
+    shortGameSand: { value: 0, count: 0 },
+    recovery: { value: 0, count: 0 },
+    green: { value: 0, count: 0 },
   }
+}
+
+function addValue(bucket, sg) {
+  bucket.value += sg
+  bucket.count += 1
 }
 
 function addShotToDetailedSummary(acc, shot) {
   const sg = Number(shot.strokes_gained)
   if (!Number.isFinite(sg)) return acc
 
-  acc.total += sg
+  addValue(acc.total, sg)
 
-  if (shot.sg_category === "Tee") acc.tee += sg
-  if (shot.sg_category === "Approach + Fairway") acc.approachFairway += sg
-  if (shot.sg_category === "Approach + Rough") acc.approachRough += sg
-  if (shot.sg_category === "Approach + Sand") acc.approachSand += sg
-  if (shot.sg_category === "Short Game + Fairway") acc.shortGameFairway += sg
-  if (shot.sg_category === "Short Game + Rough") acc.shortGameRough += sg
-  if (shot.sg_category === "Short Game + Sand") acc.shortGameSand += sg
-  if (shot.sg_category === "Recovery") acc.recovery += sg
-  if (shot.sg_category === "Putting") acc.green += sg
+  if (shot.sg_category === "Tee") addValue(acc.tee, sg)
+  if (shot.sg_category === "Approach + Fairway") addValue(acc.approachFairway, sg)
+  if (shot.sg_category === "Approach + Rough") addValue(acc.approachRough, sg)
+  if (shot.sg_category === "Approach + Sand") addValue(acc.approachSand, sg)
+  if (shot.sg_category === "Short Game + Fairway") addValue(acc.shortGameFairway, sg)
+  if (shot.sg_category === "Short Game + Rough") addValue(acc.shortGameRough, sg)
+  if (shot.sg_category === "Short Game + Sand") addValue(acc.shortGameSand, sg)
+  if (shot.sg_category === "Recovery") addValue(acc.recovery, sg)
+  if (shot.sg_category === "On green" || shot.sg_category === "Putting") {
+    addValue(acc.green, sg)
+  }
 
   return acc
 }
 
 function summarizeShotsForRound(shots) {
   return shots.reduce(addShotToDetailedSummary, createEmptySgSummary())
+}
+
+function finalizeBucket(bucket, alwaysKeep = false) {
+  if (!bucket || typeof bucket !== "object") return alwaysKeep ? 0 : null
+  if (bucket.count === 0) return alwaysKeep ? 0 : null
+  return Number(bucket.value.toFixed(3))
+}
+
+function finalizeRoundSummary(summary) {
+  return {
+    total: finalizeBucket(summary.total, true),
+    tee: finalizeBucket(summary.tee),
+    approachFairway: finalizeBucket(summary.approachFairway),
+    approachRough: finalizeBucket(summary.approachRough),
+    approachSand: finalizeBucket(summary.approachSand),
+    shortGameFairway: finalizeBucket(summary.shortGameFairway),
+    shortGameRough: finalizeBucket(summary.shortGameRough),
+    shortGameSand: finalizeBucket(summary.shortGameSand),
+    recovery: finalizeBucket(summary.recovery),
+    green: finalizeBucket(summary.green),
+  }
 }
 
 function calculateSlope(values) {
@@ -63,10 +91,6 @@ function calculateSlopes(data, keys) {
   return result
 }
 
-function nullIfEffectivelyZero(value, epsilon = 1e-9) {
-  return Math.abs(value) < epsilon ? null : value
-}
-
 export function buildSgTimeline(rounds = [], shots = []) {
   const shotsByRound = {}
 
@@ -83,21 +107,22 @@ export function buildSgTimeline(rounds = [], shots = []) {
 
       if (roundShots.length === 0) return null
 
-      const summary = summarizeShotsForRound(roundShots)
+      const rawSummary = summarizeShotsForRound(roundShots)
+      const summary = finalizeRoundSummary(rawSummary)
 
       return {
         round_id: round.id,
         date: round.date,
         course: round.course,
-        tee: nullIfEffectivelyZero(summary.tee),
-        approachFairway: nullIfEffectivelyZero(summary.approachFairway),
-        approachRough: nullIfEffectivelyZero(summary.approachRough),
-        approachSand: nullIfEffectivelyZero(summary.approachSand),
-        shortGameFairway: nullIfEffectivelyZero(summary.shortGameFairway),
-        shortGameRough: nullIfEffectivelyZero(summary.shortGameRough),
-        shortGameSand: nullIfEffectivelyZero(summary.shortGameSand),
-        recovery: nullIfEffectivelyZero(summary.recovery),
-        green: nullIfEffectivelyZero(summary.green),
+        tee: summary.tee,
+        approachFairway: summary.approachFairway,
+        approachRough: summary.approachRough,
+        approachSand: summary.approachSand,
+        shortGameFairway: summary.shortGameFairway,
+        shortGameRough: summary.shortGameRough,
+        shortGameSand: summary.shortGameSand,
+        recovery: summary.recovery,
+        green: summary.green,
         total: summary.total,
       }
     })
@@ -203,6 +228,7 @@ export function buildMissPatternByCategoryFromShots(shots = []) {
     "Short Game + Sand": createEmptyMissPatternCounts(),
     "Recovery": createEmptyMissPatternCounts(),
     "Putting": createEmptyMissPatternCounts(),
+    "On green": createEmptyMissPatternCounts(),
   }
 
   for (const shot of shots) {

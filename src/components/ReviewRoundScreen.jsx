@@ -2,6 +2,7 @@ import StatCard from "./StatCard"
 import PieChart from "./PieChart"
 import Scorecard from "./Scorecard"
 import { formatToPar } from "../utils/golfFormatters"
+import { buildMissPatternByCategoryFromShots } from "../utils/analyticsTransforms"
 
 import {
   MISS_PATTERN_LABELS,
@@ -9,8 +10,40 @@ import {
   MISS_PATTERN_COLORS,
 } from "../utils/missPatternConfig"
 
+const CATEGORY_LABELS = {
+  Tee: "Off the Tee",
+  "Approach + Fairway": "Approach + Fairway",
+  "Approach + Rough": "Approach + Rough",
+  "Approach + Sand": "Approach + Sand",
+  "Short Game + Fairway": "Short Game + Fairway",
+  "Short Game + Rough": "Short Game + Rough",
+  "Short Game + Sand": "Short Game + Sand",
+  Recovery: "Recovery",
+  "On green": "On Green",
+  Putting: "On Green",
+}
+
+function getMissPatternTotal(counts = {}) {
+  return Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0)
+}
+
+function countsToPieChartData(counts = {}) {
+  return MISS_PATTERN_ORDER
+    .map((key) => ({
+      key,
+      value: Number(counts[key] || 0),
+    }))
+    .filter((item) => item.value > 0)
+    .map((item) => ({
+      label: MISS_PATTERN_LABELS[item.key],
+      value: item.value,
+      color: MISS_PATTERN_COLORS[item.key],
+    }))
+}
+
 export default function ReviewRoundScreen({
   selectedReviewRound,
+  selectedReviewShots = [],
   reviewSummary,
   deleteRound,
   loading,
@@ -27,17 +60,38 @@ export default function ReviewRoundScreen({
     { label: "No GIR", value: reviewSummary.girMisses, color: "#d1d5db" },
   ]
 
-  const missPatternChart = MISS_PATTERN_ORDER
-    .map((key) => ({
-      key,
-      value: reviewSummary.missPatternCounts?.[key] || 0,
-    }))
-    .filter((d) => d.value > 0)
-    .map((d) => ({
-      label: MISS_PATTERN_LABELS[d.key],
-      value: d.value,
-      color: MISS_PATTERN_COLORS[d.key],
-    }))
+  const missPatternByCategoryRaw = buildMissPatternByCategoryFromShots(selectedReviewShots)
+
+  const mergedMissPatternByCategory = Object.entries(missPatternByCategoryRaw).reduce(
+    (acc, [category, counts]) => {
+      const normalizedCategory = category === "Putting" ? "On green" : category
+
+      if (!acc[normalizedCategory]) {
+        acc[normalizedCategory] = {}
+      }
+
+      for (const key of MISS_PATTERN_ORDER) {
+        acc[normalizedCategory][key] =
+          Number(acc[normalizedCategory][key] || 0) + Number(counts?.[key] || 0)
+      }
+
+      return acc
+    },
+    {}
+  )
+
+  const missPatternSections = Object.entries(mergedMissPatternByCategory)
+    .map(([category, counts]) => {
+      const total = getMissPatternTotal(counts)
+
+      return {
+        category,
+        label: CATEGORY_LABELS[category] || category,
+        total,
+        data: countsToPieChartData(counts),
+      }
+    })
+    .filter((section) => section.total > 0 && section.data.length > 0)
 
   return (
     <div style={styles.page}>
@@ -48,27 +102,27 @@ export default function ReviewRoundScreen({
             {selectedReviewRound?.course} • {selectedReviewRound?.date}
           </p>
 
-        <div style={styles.statsGrid}>
-          <StatCard label="Score" value={reviewSummary.totalScore} styles={styles} />
-          <StatCard
-            label="To Par"
-            value={formatToPar(reviewSummary.totalScore, reviewSummary.totalPar)}
-            styles={styles}
-          />
-          <StatCard
-            label="Avg Putts"
-            value={
-              reviewSummary.playedCount > 0
-                ? (reviewSummary.totalPutts / reviewSummary.playedCount).toFixed(1)
-                : "-"
-            }
-            styles={styles}
-          />
-          <StatCard label="Avg Par 3" value={reviewSummary.avgPar3} styles={styles} />
-          <StatCard label="Avg Par 4" value={reviewSummary.avgPar4} styles={styles} />
-          <StatCard label="Avg Par 5" value={reviewSummary.avgPar5} styles={styles} />
+          <div style={styles.statsGrid}>
+            <StatCard label="Score" value={reviewSummary.totalScore} styles={styles} />
+            <StatCard
+              label="To Par"
+              value={formatToPar(reviewSummary.totalScore, reviewSummary.totalPar)}
+              styles={styles}
+            />
+            <StatCard
+              label="Avg Putts"
+              value={
+                reviewSummary.playedCount > 0
+                  ? (reviewSummary.totalPutts / reviewSummary.playedCount).toFixed(1)
+                  : "-"
+              }
+              styles={styles}
+            />
+            <StatCard label="Avg Par 3" value={reviewSummary.avgPar3} styles={styles} />
+            <StatCard label="Avg Par 4" value={reviewSummary.avgPar4} styles={styles} />
+            <StatCard label="Avg Par 5" value={reviewSummary.avgPar5} styles={styles} />
+          </div>
         </div>
-      </div>
 
         <div style={styles.sectionCard}>
           <h2 style={styles.sectionTitle}>Scorecard</h2>
@@ -77,7 +131,25 @@ export default function ReviewRoundScreen({
 
         <PieChart title="Fairways" data={fwChart} styles={styles} />
         <PieChart title="GIR" data={girChart} styles={styles} />
-        <PieChart title="Miss Pattern" data={missPatternChart} styles={styles} />
+
+        <div style={styles.sectionCard}>
+          <h2 style={styles.sectionTitle}>Miss Pattern by Category</h2>
+
+          {missPatternSections.length === 0 ? (
+            <p style={styles.mutedText}>No miss pattern data for this round.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 20 }}>
+              {missPatternSections.map((section) => (
+                <PieChart
+                  key={section.category}
+                  title={section.label}
+                  data={section.data}
+                  styles={styles}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
         <div style={styles.buttonRow}>
           <button style={styles.primaryButton} onClick={goHome}>
