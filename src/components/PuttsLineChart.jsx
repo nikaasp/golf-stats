@@ -49,7 +49,7 @@ export default function PuttsLineChart({ data, styles }) {
               type="monotone"
               dataKey="avgPutts"
               name="Avg Putts"
-              stroke="#8b5cf6"
+              stroke="#803c87"
               strokeWidth={2}
               connectNulls
               dot={{ r: 3 }}

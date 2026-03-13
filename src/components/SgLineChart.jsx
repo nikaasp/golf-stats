@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect } from "react"
 
+import { SG_SERIES } from "../utils/sgConfig"
+
 function formatDateLabel(dateStr, includeYear = false) {
   if (!dateStr) return ""
   const d = new Date(dateStr)
@@ -88,19 +90,6 @@ function buildPolylineSegments(data, key, xForIndex, yForValue) {
   return segments
 }
 
-const SERIES = [
-  { key: "total", label: "Total", color: "#111827", locked: true },
-  { key: "tee", label: "Off the tee", color: "#2563eb" },
-  { key: "approachFairway", label: "App (FW)", color: "#16a34a" },
-  { key: "approachRough", label: "App (RGH)", color: "#22c55e" },
-  { key: "approachSand", label: "App (SND)", color: "#84cc16" },
-  { key: "shortGameFairway", label: "SG (FW)", color: "#f59e0b" },
-  { key: "shortGameRough", label: "SG (RGH)", color: "#f97316" },
-  { key: "shortGameSand", label: "SG (SND)", color: "#ea580c" },
-  { key: "recovery", label: "Recovery", color: "#ef4444" },
-  { key: "green", label: "On green", color: "#7c3aed" },
-]
-
 function seriesHasAnyData(data, key) {
   return data.some((row) => getFiniteNumber(row[key]) !== null)
 }
@@ -117,7 +106,7 @@ export default function SgLineChart({ data, slopes, styles }) {
   const padding = { top: 20, right: 16, bottom: 32, left: 42 }
 
   const availableSeries = useMemo(() => {
-    return SERIES.filter((s) => {
+    return SG_SERIES.filter((s) => {
       if (s.key === "total") return true
       return seriesHasAnyData(data || [], s.key)
     })

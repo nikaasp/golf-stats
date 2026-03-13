@@ -23,13 +23,18 @@ export const MISS_PATTERN_ORDER = [
 ]
 
 export const MISS_PATTERN_COLORS = {
-  long_left: "#06b6d4",
+  // LONG FAMILY (cool blue gradient)
+  long_left: "#0ea5e9",
   long: "#2563eb",
-  long_right: "#84cc16",
-  left: "#ef4444",
+  long_right: "#60a5fa",
+
+  // GOOD DISTANCE FAMILY (violet)
+  left: "#a855f7",
   spot_on: "#16a34a",
-  right: "#8b5cf6",
-  short_left: "#ec4899",
+  right: "#7c3aed",
+
+  // SHORT FAMILY (warm orange gradient)
+  short_left: "#fb923c",
   short: "#f59e0b",
-  short_right: "#22c55e",
+  short_right: "#f97316",
 }

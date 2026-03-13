@@ -49,7 +49,7 @@ export default function PercentLineChart({ data, styles }) {
               type="monotone"
               dataKey="fairwayPct"
               name="Fairway %"
-              stroke="#2563eb"
+              stroke="#e6aa06"
               strokeWidth={2}
               connectNulls
               dot={{ r: 3 }}
@@ -59,7 +59,7 @@ export default function PercentLineChart({ data, styles }) {
               type="monotone"
               dataKey="girPct"
               name="GIR %"
-              stroke="#16a34a"
+              stroke="#4ab140"
               strokeWidth={2}
               connectNulls
               dot={{ r: 3 }}

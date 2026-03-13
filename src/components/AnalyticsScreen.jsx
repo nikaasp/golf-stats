@@ -14,25 +14,13 @@ import {
   buildPuttsTimeline,
   buildMissPatternByCategoryFromShots,
 } from "../utils/analyticsTransforms"
-
 import {
   MISS_PATTERN_LABELS,
   MISS_PATTERN_ORDER,
   MISS_PATTERN_COLORS,
 } from "../utils/missPatternConfig"
 
-
-const CATEGORY_LABELS = {
-  "Tee": "Off the tee",
-  "Approach + Fairway": "Approach (FW)",
-  "Approach + Rough": "Approach (RGH)",
-  "Approach + Sand": "Approach (SND)",
-  "Short Game + Fairway": "Short game (FW)",
-  "Short Game + Rough": "Short game (RGH)",
-  "Short Game + Sand": "Short game (SND)",
-  Recovery: "Recovery",
-  Putting: "On the green",
-}
+import { SG_CATEGORY_LABELS } from "../utils/sgConfig"
 
 export default function AnalyticsScreen({
   courses,
@@ -116,7 +104,7 @@ export default function AnalyticsScreen({
     return Object.entries(grouped)
       .map(([categoryKey, counts]) => ({
         key: categoryKey,
-        title: CATEGORY_LABELS[categoryKey] || categoryKey,
+        title: SG_CATEGORY_LABELS[categoryKey] || categoryKey,
         data: MISS_PATTERN_ORDER
           .map((key) => ({
             key,
