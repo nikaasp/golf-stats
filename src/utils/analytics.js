@@ -1,11 +1,5 @@
 import { clamp } from "./golfFormatters"
 
-export function getPenaltyFromType(type) {
-  if (type === "Hazard") return 1
-  if (type === "OB") return 2
-  return 0
-}
-
 export function getDefaultLieForShot(shotNumber) {
   return shotNumber === 1 ? "Tee" : "Fairway"
 }
@@ -15,9 +9,9 @@ export function makeShot(shotNumber) {
     shot_number: shotNumber,
     lie: getDefaultLieForShot(shotNumber),
     distance_to_flag: "",
-    miss_pattern: "",
-    strike_quality: "",
-    penalty_type: "None",
+    miss_pattern: null,
+    strike_quality: null,
+    auto_penalty: 0,
   }
 }
 
@@ -34,7 +28,7 @@ export function calculateShotModeTotals(shots) {
   const validShots = getValidShots(shots)
   const shotCount = validShots.length
   const autoPenalty = validShots.reduce(
-    (sum, shot) => sum + getPenaltyFromType(shot.penalty_type),
+    (sum, shot) => sum + Number(shot.auto_penalty || 0),
     0
   )
 
@@ -213,7 +207,6 @@ function createEmptyMissPatternCounts() {
     long: 0,
     long_right: 0,
     left: 0,
-    spot_on: 0,
     right: 0,
     short_left: 0,
     short: 0,
@@ -223,15 +216,15 @@ function createEmptyMissPatternCounts() {
 
 function createMissPatternByCategory() {
   return {
-    "Tee": createEmptyMissPatternCounts(),
+    Tee: createEmptyMissPatternCounts(),
     "Approach + Fairway": createEmptyMissPatternCounts(),
     "Approach + Rough": createEmptyMissPatternCounts(),
     "Approach + Sand": createEmptyMissPatternCounts(),
     "Short Game + Fairway": createEmptyMissPatternCounts(),
     "Short Game + Rough": createEmptyMissPatternCounts(),
     "Short Game + Sand": createEmptyMissPatternCounts(),
-    "Recovery": createEmptyMissPatternCounts(),
-    "Putting": createEmptyMissPatternCounts(),
+    Recovery: createEmptyMissPatternCounts(),
+    Putting: createEmptyMissPatternCounts(),
   }
 }
 
@@ -248,12 +241,12 @@ export function buildRoundAnalytics(holes, shots) {
   let fwHits = 0
   let fwOpp = 0
 
-  let driveValues = []
-  let approachValues = []
+  const driveValues = []
+  const approachValues = []
 
-  let par3Scores = []
-  let par4Scores = []
-  let par5Scores = []
+  const par3Scores = []
+  const par4Scores = []
+  const par5Scores = []
 
   const missPatternCounts = createEmptyMissPatternCounts()
   const missPatternByCategory = createMissPatternByCategory()

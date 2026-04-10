@@ -31,7 +31,6 @@ import {
   buildRoundAnalytics,
   calculateShotModeTotals,
   getDefaultLieForShot,
-  getPenaltyFromType,
   getValidShots,
   inferHoleValuesFromShots,
   makeShot,
@@ -378,7 +377,10 @@ function App() {
         .map((shot, i) => ({
           ...shot,
           shot_number: i + 1,
-          lie: getDefaultLieForShot(i + 1),
+          lie:
+            i === 0
+              ? shot.lie || "Tee"
+              : shot.lie || getDefaultLieForShot(i + 1),
         }))
 
       setActiveShotIndex(Math.max(0, Math.min(activeShotIndex, updated.length - 1)))
@@ -390,7 +392,22 @@ function App() {
     setShots((prev) =>
       prev.map((shot, i) => {
         if (i !== index) return shot
-        return { ...shot, [field]: value }
+
+        let nextValue = value
+
+        if (field === "auto_penalty") {
+          nextValue = Number(value || 0)
+        }
+
+        if (field === "miss_pattern" && !value) {
+          nextValue = null
+        }
+
+        if (field === "strike_quality" && !value) {
+          nextValue = null
+        }
+
+        return { ...shot, [field]: nextValue }
       })
     )
 
@@ -582,8 +599,8 @@ function App() {
       lie: shot.lie,
       distance_to_flag: Number(shot.distance_to_flag),
       miss_pattern: shot.miss_pattern || null,
-      penalty_type: shot.penalty_type || "None",
-      auto_penalty: getPenaltyFromType(shot.penalty_type),
+      strike_quality: shot.strike_quality || null,
+      auto_penalty: Number(shot.auto_penalty || 0),
       sg_category: shot.sg_category,
       expected_before: shot.expected_before,
       expected_after: shot.expected_after,

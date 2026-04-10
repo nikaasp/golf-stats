@@ -33,7 +33,7 @@ export function getShotSgCategory({ shot, shotIndex }) {
   const lie = normalizeLie(shot.lie)
   const APPROACH_THRESHOLD = 90
 
-  if (lie === "Green") return "On green"
+  if (lie === "Green") return "Putting"
   if (shotIndex === 0 && lie === "Tee") return "Tee"
   if (lie === "Recovery") return "Recovery"
 
@@ -71,7 +71,6 @@ export function getSgLookupKeyFromCategory(sgCategory) {
       return "sand"
     case "Recovery":
       return "recovery"
-    case "On green":
     case "Putting":
       return "green"
     default:
@@ -151,7 +150,7 @@ function addShotToSummary(acc, shot) {
   if (shot.sg_category === "Short Game + Rough") acc.shortGameRough += sg
   if (shot.sg_category === "Short Game + Sand") acc.shortGameSand += sg
   if (shot.sg_category === "Recovery") acc.recovery += sg
-  if (shot.sg_category === "On green" || shot.sg_category === "Putting") acc.green += sg
+  if (shot.sg_category === "Putting") acc.green += sg
 
   return acc
 }

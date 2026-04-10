@@ -2,7 +2,7 @@ import { useEffect, useMemo } from "react"
 import DistancePicker from "./DistancePicker"
 
 const LIE_OPTIONS = [
-  { value: "Tee", color: "#d6eeca", border: "#656565", text: "#828282"},
+  { value: "Tee", color: "#d6eeca", border: "#656565", text: "#828282" },
   { value: "Fairway", color: "#d6eeca", border: "#656565", text: "#2d5722" },
   { value: "Rough", color: "#d6eeca", border: "#656565", text: "#11472d" },
   { value: "Sand", color: "#d6eeca", border: "#656565", text: "#c59454" },
@@ -37,18 +37,6 @@ function getShotTypeLabel(index, lie) {
   if (lie === "Sand") return "Bunker Shot"
   if (lie === "Recovery") return "Recovery Shot"
   return "Shot"
-}
-
-function getPenaltySelection(penaltyType) {
-  if (penaltyType === "Hazard") return "+1"
-  if (penaltyType === "OB") return "+2"
-  return null
-}
-
-function penaltyValueToType(value) {
-  if (value === "+1") return "Hazard"
-  if (value === "+2") return "OB"
-  return "None"
 }
 
 export default function ShotCard({
@@ -103,7 +91,7 @@ export default function ShotCard({
     }
   }
 
-  const selectedPenalty = getPenaltySelection(shot.penalty_type)
+  const selectedPenalty = Number(shot.auto_penalty || 0)
 
   return (
     <div
@@ -162,12 +150,14 @@ export default function ShotCard({
           TARGET DISTANCE
           {showHoleLengthHint && (
             <span style={styles.inlineHintCompact}> (auto-filled)</span>
-          )} / MISS DIRECTION
+          )}{" "}
+          / MISS DIRECTION
         </label>
 
         <div style={styles.resultCockpit}>
           {MISS_BUTTONS.map((btn) => {
             const selected = shot.miss_pattern === btn.value
+
             return (
               <button
                 key={btn.value}
@@ -187,7 +177,13 @@ export default function ShotCard({
             )
           })}
 
-          <div style={{ gridArea: "center", alignSelf: "center", justifySelf: "center" }}>
+          <div
+            style={{
+              gridArea: "center",
+              alignSelf: "center",
+              justifySelf: "center",
+            }}
+          >
             <DistancePicker
               value={shot.distance_to_flag}
               onChange={(value) => handleFieldChange("distance_to_flag", value)}
@@ -226,7 +222,9 @@ export default function ShotCard({
           <label style={styles.labelCompact}>PENALTIES</label>
           <div style={styles.penaltyCheckboxRow}>
             {["+1", "+2"].map((value) => {
-              const checked = selectedPenalty === value
+              const penaltyNumber = value === "+1" ? 1 : 2
+              const checked = selectedPenalty === penaltyNumber
+
               return (
                 <label key={value} style={styles.penaltyCheckboxWrap}>
                   <input
@@ -234,11 +232,9 @@ export default function ShotCard({
                     checked={checked}
                     onChange={(e) => {
                       e.stopPropagation()
-                      const nextType = e.target.checked
-                        ? penaltyValueToType(value)
-                        : "None"
 
-                      handleFieldChange("penalty_type", nextType)
+                      const nextPenalty = e.target.checked ? penaltyNumber : 0
+                      handleFieldChange("auto_penalty", nextPenalty)
 
                       if (e.target.checked) {
                         setTimeout(() => {
