@@ -15,19 +15,15 @@ export default function InRoundScreen({
   updateShot,
   removeShotCard,
   addShotCard,
-  shotTotals,
   goHomeAndReset,
   goToNextHole,
   goToPrevHole,
   holeLength,
 }) {
   const activeShot = shots?.[activeShotIndex] || null
-  const shotNumber = activeShotIndex + 1
-  const totalShots = shots?.length || 0
-  const teeToFlag = Number(holeLength) > 0 ? `${Number(holeLength)} m` : "-"
-
   const isFirstShot = activeShotIndex <= 0
-  const isLastShot = activeShotIndex >= totalShots - 1
+  const isLastShot = activeShotIndex >= (shots?.length || 1) - 1
+  const teeToFlag = Number(holeLength) > 0 ? `${Number(holeLength)} m` : "-"
 
   return (
     <div style={styles.screenContainer}>
@@ -41,16 +37,16 @@ export default function InRoundScreen({
         </div>
       </div>
 
-      <div style={styles.parSelectorWrap}>
-        <div style={styles.label}>Par</div>
-        <div style={styles.parButtonRow}>
+      <div style={styles.parSelectorWrapCompact}>
+        <div style={styles.labelCompact}>Par</div>
+        <div style={styles.parButtonRowCompact}>
           {PAR_OPTIONS.map((option) => (
             <button
               key={option}
               type="button"
               style={{
-                ...styles.segmentedButton,
-                ...(String(par) === String(option) ? styles.segmentedActive : {}),
+                ...styles.parButtonCompact,
+                ...(String(par) === String(option) ? styles.parButtonCompactActive : {}),
               }}
               onClick={() => setPar(String(option))}
             >
@@ -60,30 +56,14 @@ export default function InRoundScreen({
         </div>
       </div>
 
-      <div style={styles.inRoundMain}>
-        <div style={styles.inRoundMetaRow}>
-          <div style={styles.inRoundMetaCard}>
-            <div style={styles.inRoundMetaLabel}>Active shot</div>
-            <div style={styles.inRoundMetaValue}>
-              {shotNumber} / {Math.max(totalShots, 1)}
-            </div>
-          </div>
-
-          <div style={styles.inRoundMetaCard}>
-            <div style={styles.inRoundMetaLabel}>Strokes so far</div>
-            <div style={styles.inRoundMetaValue}>
-              {shotTotals?.totalScore ?? totalShots}
-            </div>
-          </div>
-        </div>
-
+      <div style={styles.inRoundMainCompact}>
         <div style={styles.inRoundCenterWrap}>
           <div style={styles.inRoundShotCardWrap}>
             {activeShot && (
               <ShotCard
                 shot={activeShot}
                 index={activeShotIndex}
-                shotCount={totalShots}
+                shotCount={shots?.length || 1}
                 active
                 setActive={() => {}}
                 updateShot={updateShot}
@@ -98,11 +78,11 @@ export default function InRoundScreen({
         </div>
       </div>
 
-      <div style={styles.inRoundFooter}>
-        <div style={styles.inRoundShotNavRow}>
+      <div style={styles.inRoundFooterCompact}>
+        <div style={styles.inRoundShotNavRowCompact}>
           <button
             type="button"
-            style={styles.sideNavButton}
+            style={styles.lightBlueNavButton}
             onClick={() => setActiveShotIndex((prev) => Math.max(0, prev - 1))}
             disabled={isFirstShot}
           >
@@ -111,7 +91,7 @@ export default function InRoundScreen({
 
           <button
             type="button"
-            style={styles.sideNavButton}
+            style={styles.lightBlueNavButton}
             onClick={() => {
               if (isLastShot) {
                 addShotCard()
@@ -120,21 +100,21 @@ export default function InRoundScreen({
               }
             }}
           >
-            {isLastShot ? "Add / Next Shot" : "Next Shot"}
+            Add / Next Shot
           </button>
         </div>
 
-        <div style={styles.inRoundHoleNavRow}>
-          <button type="button" style={styles.cornerNavButton} onClick={goToPrevHole}>
+        <div style={styles.inRoundHoleNavRowCompact}>
+          <button type="button" style={styles.darkBlueNavButton} onClick={goToPrevHole}>
             Prev Hole
           </button>
 
-          <button type="button" style={styles.cornerNavButton} onClick={goToNextHole}>
+          <button type="button" style={styles.darkBlueNavButton} onClick={goToNextHole}>
             Next Hole
           </button>
         </div>
 
-        <button type="button" style={styles.secondaryButton} onClick={goHomeAndReset}>
+        <button type="button" style={styles.endRoundButtonCompact} onClick={goHomeAndReset}>
           End Round
         </button>
       </div>

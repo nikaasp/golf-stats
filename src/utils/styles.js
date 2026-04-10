@@ -1278,4 +1278,311 @@ export const styles = {
     cursor: "pointer",
     padding: 0,
   },
+
+    parSelectorWrapCompact: {
+    marginBottom: "8px",
+  },
+
+  labelCompact: {
+    display: "block",
+    marginTop: "4px",
+    marginBottom: "4px",
+    fontWeight: 700,
+    fontSize: "12px",
+  },
+
+  inlineHintCompact: {
+    fontSize: "10px",
+    color: "#6b7280",
+    fontWeight: 400,
+  },
+
+  parButtonRowCompact: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "6px",
+  },
+
+  parButtonCompact: {
+    minHeight: "36px",
+    borderRadius: "12px",
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    fontSize: "13px",
+    fontWeight: 800,
+    cursor: "pointer",
+  },
+
+  parButtonCompactActive: {
+    background: "#4f46e5",
+    color: "#ffffff",
+    border: "1px solid #4f46e5",
+  },
+
+  inRoundMainCompact: {
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+    overflow: "hidden",
+  },
+
+  inRoundFooterCompact: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+  },
+
+  inRoundShotNavRowCompact: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
+  },
+
+  inRoundHoleNavRowCompact: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
+  },
+
+  lightBlueNavButton: {
+    minHeight: "42px",
+    borderRadius: "12px",
+    border: "1px solid #93c5fd",
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    fontWeight: 800,
+    fontSize: "14px",
+    cursor: "pointer",
+  },
+
+  darkBlueNavButton: {
+    minHeight: "42px",
+    borderRadius: "12px",
+    border: "1px solid #1e3a8a",
+    background: "#1d4ed8",
+    color: "#ffffff",
+    fontWeight: 800,
+    fontSize: "14px",
+    cursor: "pointer",
+  },
+
+  endRoundButtonCompact: {
+    minHeight: "40px",
+    borderRadius: "12px",
+    border: "1px solid #dc2626",
+    background: "#ef4444",
+    color: "#ffffff",
+    fontWeight: 800,
+    fontSize: "14px",
+    cursor: "pointer",
+  },
+
+  shotCardCompact: {
+    border: "1px solid #93c5fd",
+    borderRadius: "18px",
+    padding: "10px",
+    background: "#f8fbff",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    overflow: "hidden",
+  },
+
+  shotCardActiveCompact: {
+    boxShadow: "0 0 0 1px #93c5fd inset",
+  },
+
+  shotCardHeaderCompact: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "8px",
+  },
+
+  shotTypeCompact: {
+    fontSize: "11px",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    color: "#6b7280",
+    marginBottom: "2px",
+  },
+
+  shotNumberCompact: {
+    fontSize: "16px",
+    fontWeight: 800,
+    color: "#111827",
+  },
+
+  removeGhostButtonCompact: {
+    border: "none",
+    background: "transparent",
+    color: "#dc2626",
+    fontWeight: 700,
+    cursor: "pointer",
+    fontSize: "13px",
+    padding: 0,
+  },
+
+  lieButtonGridCompact: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "6px",
+  },
+
+  lieButtonCompact: {
+    minHeight: "34px",
+    borderRadius: "10px",
+    fontSize: "12px",
+    fontWeight: 700,
+    cursor: "pointer",
+    padding: "4px 6px",
+  },
+
+  resultCockpit: {
+    display: "grid",
+    gridTemplateColumns: "36px 1fr 36px",
+    gridTemplateRows: "36px auto 36px",
+    gridTemplateAreas: `
+      "topLeft topCenter topRight"
+      "midLeft center midRight"
+      "bottomLeft bottomCenter bottomRight"
+    `,
+    gap: "6px",
+    alignItems: "center",
+  },
+
+  resultArrowButton: {
+    minHeight: "36px",
+    minWidth: "36px",
+    borderRadius: "10px",
+    border: "1px solid #cbd5e1",
+    background: "#ffffff",
+    color: "#334155",
+    fontSize: "16px",
+    fontWeight: 800,
+    cursor: "pointer",
+    padding: 0,
+  },
+
+  resultArrowButtonActive: {
+    background: "#dbeafe",
+    border: "1px solid #60a5fa",
+    color: "#1d4ed8",
+  },
+
+  shotBottomRowCompact: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: "12px",
+    alignItems: "end",
+  },
+
+  strikeRowCompact: {
+    display: "flex",
+    gap: "6px",
+  },
+
+  strikeButtonCompact: {
+    width: "38px",
+    height: "38px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    fontSize: "20px",
+    cursor: "pointer",
+    padding: 0,
+  },
+
+  strikeButtonCompactActive: {
+    background: "#fff7ed",
+    border: "1px solid #fdba74",
+  },
+
+  penaltyCheckboxRow: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+  },
+
+  penaltyCheckboxWrap: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#374151",
+  },
+
+  penaltyCheckbox: {
+    width: "16px",
+    height: "16px",
+    margin: 0,
+  },
+
+  penaltyCheckboxLabel: {
+    minWidth: "20px",
+  },
+
+  distanceWrapMini: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "6px",
+  },
+
+  distanceDisplayMini: {
+    minWidth: "78px",
+    minHeight: "34px",
+    display: "inline-flex",
+    alignItems: "baseline",
+    justifyContent: "center",
+    gap: "4px",
+    fontSize: "16px",
+    fontWeight: 800,
+    background: "#eef2ff",
+    padding: "6px 10px",
+    borderRadius: "10px",
+    border: "1px solid #c7d2fe",
+    color: "#1f2937",
+  },
+
+  distanceUnitMini: {
+    fontSize: "10px",
+    fontWeight: 700,
+    color: "#4b5563",
+  },
+
+  keypadMini: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "4px",
+    width: "100%",
+    maxWidth: "126px",
+    margin: "0 auto",
+  },
+
+  keypadButtonMini: {
+    height: "28px",
+    borderRadius: "8px",
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    fontWeight: 800,
+    fontSize: "13px",
+    cursor: "pointer",
+    padding: 0,
+  },
+
+  keypadButtonMiniSecondary: {
+    height: "28px",
+    borderRadius: "8px",
+    border: "1px solid #d1d5db",
+    background: "#f9fafb",
+    color: "#374151",
+    fontWeight: 800,
+    fontSize: "11px",
+    cursor: "pointer",
+    padding: 0,
+  },
 }

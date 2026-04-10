@@ -10,18 +10,18 @@ export default function DistancePicker({ value, onChange, styles }) {
   const handleBack = () => onChange(safeValue.slice(0, -1))
 
   return (
-    <div style={styles.distanceWrapCompact}>
-      <div style={styles.distanceDisplayCompact}>
+    <div style={styles.distanceWrapMini}>
+      <div style={styles.distanceDisplayMini}>
         <span>{safeValue || "--"}</span>
-        <span style={styles.distanceUnitCompact}>m</span>
+        <span style={styles.distanceUnitMini}>m</span>
       </div>
 
-      <div style={styles.keypadCompact}>
+      <div style={styles.keypadMini}>
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
           <button
             key={n}
             type="button"
-            style={styles.keypadButtonCompact}
+            style={styles.keypadButtonMini}
             onClick={() => handleNumber(n)}
           >
             {n}
@@ -30,7 +30,7 @@ export default function DistancePicker({ value, onChange, styles }) {
 
         <button
           type="button"
-          style={styles.keypadButtonCompactSecondary}
+          style={styles.keypadButtonMiniSecondary}
           onClick={handleClear}
         >
           C
@@ -38,7 +38,7 @@ export default function DistancePicker({ value, onChange, styles }) {
 
         <button
           type="button"
-          style={styles.keypadButtonCompact}
+          style={styles.keypadButtonMini}
           onClick={() => handleNumber(0)}
         >
           0
@@ -46,7 +46,7 @@ export default function DistancePicker({ value, onChange, styles }) {
 
         <button
           type="button"
-          style={styles.keypadButtonCompactSecondary}
+          style={styles.keypadButtonMiniSecondary}
           onClick={handleBack}
         >
           ⌫

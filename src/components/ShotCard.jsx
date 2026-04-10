@@ -1,30 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo } from "react"
 import DistancePicker from "./DistancePicker"
-import { getPenaltyFromType } from "../utils/analytics"
 
-const LIE_OPTIONS = ["Tee", "Fairway", "Rough", "Sand", "Recovery", "Green"]
-
-const MISS_PATTERN_GRID = [
-  [
-    { value: "long_left", label: "Long Left", icon: "↖" },
-    { value: "long", label: "Long", icon: "↑" },
-    { value: "long_right", label: "Long Right", icon: "↗" },
-  ],
-  [
-    { value: "left", label: "Left", icon: "←" },
-    { value: "right", label: "Right", icon: "→" },
-  ],
-  [
-    { value: "short_left", label: "Short Left", icon: "↙" },
-    { value: "short", label: "Short", icon: "↓" },
-    { value: "short_right", label: "Short Right", icon: "↘" },
-  ],
+const LIE_OPTIONS = [
+  { value: "Tee", color: "#dbeafe", border: "#93c5fd", text: "#1d4ed8" },
+  { value: "Fairway", color: "#dcfce7", border: "#86efac", text: "#15803d" },
+  { value: "Rough", color: "#fef3c7", border: "#fcd34d", text: "#b45309" },
+  { value: "Sand", color: "#ffedd5", border: "#fdba74", text: "#c2410c" },
+  { value: "Recovery", color: "#e5e7eb", border: "#cbd5e1", text: "#475569" },
+  { value: "Green", color: "#ccfbf1", border: "#5eead4", text: "#0f766e" },
 ]
 
-const PENALTY_OPTIONS = [
-  { value: "None", label: "None" },
-  { value: "Hazard", label: "Hazard +1" },
-  { value: "OB", label: "OB +2" },
+const MISS_BUTTONS = [
+  { value: "long_left", label: "↖", area: "topLeft" },
+  { value: "long", label: "↑", area: "topCenter" },
+  { value: "long_right", label: "↗", area: "topRight" },
+  { value: "left", label: "←", area: "midLeft" },
+  { value: "right", label: "→", area: "midRight" },
+  { value: "short_left", label: "↙", area: "bottomLeft" },
+  { value: "short", label: "↓", area: "bottomCenter" },
+  { value: "short_right", label: "↘", area: "bottomRight" },
 ]
 
 const STRIKE_OPTIONS = [
@@ -32,8 +26,6 @@ const STRIKE_OPTIONS = [
   { value: "ok", label: "🙂" },
   { value: "pure", label: "😄" },
 ]
-
-const STEP_LABELS = ["Setup", "Result", "Penalty"]
 
 function hasEmptyDistance(value) {
   return value === null || value === undefined || value === ""
@@ -45,6 +37,18 @@ function getShotTypeLabel(index, lie) {
   if (lie === "Sand") return "Bunker Shot"
   if (lie === "Recovery") return "Recovery Shot"
   return "Shot"
+}
+
+function getPenaltySelection(penaltyType) {
+  if (penaltyType === "Hazard") return "+1"
+  if (penaltyType === "OB") return "+2"
+  return null
+}
+
+function penaltyValueToType(value) {
+  if (value === "+1") return "Hazard"
+  if (value === "+2") return "OB"
+  return "None"
 }
 
 export default function ShotCard({
@@ -60,10 +64,6 @@ export default function ShotCard({
   styles,
   holeLength,
 }) {
-  const [step, setStep] = useState(0)
-  const previousDistanceRef = useRef(shot?.distance_to_flag ?? "")
-  const previousPenaltyRef = useRef(shot?.penalty_type ?? "None")
-
   useEffect(() => {
     const isFirstShot = index === 0
     const holeLengthNumber = Number(holeLength)
@@ -82,52 +82,6 @@ export default function ShotCard({
     }
   }, [index, holeLength, shot.distance_to_flag, shot.lie, updateShot])
 
-  useEffect(() => {
-    previousDistanceRef.current = shot?.distance_to_flag ?? ""
-  }, [index])
-
-  useEffect(() => {
-    previousPenaltyRef.current = shot?.penalty_type ?? "None"
-  }, [index])
-
-  const goToNextShot = () => {
-    const isLastShot = index >= shotCount - 1
-
-    if (isLastShot) {
-      addShotCard()
-    } else {
-      setActiveShotIndex(index + 1)
-    }
-  }
-
-  const handleFieldChange = (field, value) => {
-    updateShot(index, field, value)
-
-    if (field === "distance_to_flag") {
-      const previous = String(previousDistanceRef.current ?? "")
-      const next = String(value ?? "")
-      previousDistanceRef.current = next
-
-      const wasEmpty = previous.trim() === ""
-      const isNowFilled = next.trim() !== ""
-
-      if (step === 0 && wasEmpty && isNowFilled) {
-        setTimeout(() => setStep(1), 120)
-      }
-    }
-
-    if (field === "penalty_type") {
-      const previous = String(previousPenaltyRef.current ?? "None")
-      previousPenaltyRef.current = value
-
-      if (step === 2 && previous !== value) {
-        setTimeout(() => {
-          goToNextShot()
-        }, 120)
-      }
-    }
-  }
-
   const shotTypeLabel = useMemo(
     () => getShotTypeLabel(index, shot.lie),
     [index, shot.lie]
@@ -136,60 +90,38 @@ export default function ShotCard({
   const showHoleLengthHint =
     index === 0 && Number.isFinite(Number(holeLength)) && Number(holeLength) > 0
 
+  const handleFieldChange = (field, value) => {
+    updateShot(index, field, value)
+  }
+
+  const goToNextShot = () => {
+    const isLastShot = index >= shotCount - 1
+    if (isLastShot) {
+      addShotCard()
+    } else {
+      setActiveShotIndex(index + 1)
+    }
+  }
+
+  const selectedPenalty = getPenaltySelection(shot.penalty_type)
+
   return (
     <div
       style={{
-        ...styles.shotCard,
-        ...(active ? styles.shotCardActive : {}),
-        cursor: "pointer",
-        height: "100%",
-        display: "grid",
-        gridTemplateRows: "auto auto 1fr auto",
-        gap: "8px",
-        overflow: "hidden",
+        ...styles.shotCardCompact,
+        ...(active ? styles.shotCardActiveCompact : {}),
       }}
       onClick={setActive}
     >
-      <div
-        style={{
-          ...styles.shotCardHeader,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "12px",
-        }}
-      >
+      <div style={styles.shotCardHeaderCompact}>
         <div>
-          <div
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              color: "#6b7280",
-              marginBottom: "4px",
-            }}
-          >
-            {shotTypeLabel}
-          </div>
-
-          <div
-            style={{
-              ...styles.shotNumber,
-              fontSize: "18px",
-              fontWeight: 800,
-            }}
-          >
-            Shot {index + 1}
-          </div>
+          <div style={styles.shotTypeCompact}>{shotTypeLabel}</div>
+          <div style={styles.shotNumberCompact}>Shot {index + 1}</div>
         </div>
 
         <button
           type="button"
-          style={{
-            ...styles.removeGhostButton,
-            whiteSpace: "nowrap",
-          }}
+          style={styles.removeGhostButtonCompact}
           onClick={(e) => {
             e.stopPropagation()
             removeShotCard(index)
@@ -199,288 +131,131 @@ export default function ShotCard({
         </button>
       </div>
 
-      <div style={styles.shotStepPills}>
-        {STEP_LABELS.map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            style={{
-              ...styles.shotStepPill,
-              ...(step === i ? styles.shotStepPillActive : {}),
-            }}
-            onClick={(e) => {
-              e.stopPropagation()
-              setStep(i)
-            }}
-          >
-            {label}
-          </button>
-        ))}
+      <div>
+        <label style={styles.labelCompact}>Lie</label>
+        <div style={styles.lieButtonGridCompact}>
+          {LIE_OPTIONS.map((option) => {
+            const selected = shot.lie === option.value
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                style={{
+                  ...styles.lieButtonCompact,
+                  background: selected ? option.text : option.color,
+                  border: `1px solid ${option.border}`,
+                  color: selected ? "#ffffff" : option.text,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleFieldChange("lie", option.value)
+                }}
+              >
+                {option.value}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      <div style={styles.shotStepContent}>
-        {step === 0 && (
-          <div style={styles.shotStepInner}>
-            <div>
-              <label style={styles.label}>Lie</label>
-              <div
+      <div>
+        <label style={styles.labelCompact}>
+          Distance to target
+          {showHoleLengthHint && (
+            <span style={styles.inlineHintCompact}> (auto-filled)</span>
+          )}
+        </label>
+
+        <div style={styles.resultCockpit}>
+          {MISS_BUTTONS.map((btn) => {
+            const selected = shot.miss_pattern === btn.value
+            return (
+              <button
+                key={btn.value}
+                type="button"
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: "8px",
+                  ...styles.resultArrowButton,
+                  gridArea: btn.area,
+                  ...(selected ? styles.resultArrowButtonActive : {}),
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleFieldChange("miss_pattern", selected ? null : btn.value)
                 }}
               >
-                {LIE_OPTIONS.map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    style={{
-                      ...styles.segmentedButton,
-                      minHeight: "42px",
-                      fontWeight: 600,
-                      ...(shot.lie === option ? styles.segmentedActive : {}),
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleFieldChange("lie", option)
-                    }}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
+                {btn.label}
+              </button>
+            )
+          })}
 
-            <div>
-              <label style={styles.label}>
-                Distance to target
-                {showHoleLengthHint && (
-                  <span
-                    style={{
-                      fontSize: "11px",
-                      color: "#6b7280",
-                      marginLeft: "6px",
-                      fontWeight: 400,
-                    }}
-                  >
-                    (auto-filled)
-                  </span>
-                )}
-              </label>
-
-              <div
-                style={{
-                  background: "#f8fafc",
-                  padding: "6px",
-                  borderRadius: "12px",
-                  border: "1px solid #e5e7eb",
-                }}
-              >
-                <DistancePicker
-                  value={shot.distance_to_flag}
-                  onChange={(value) => handleFieldChange("distance_to_flag", value)}
-                  styles={styles}
-                />
-              </div>
-            </div>
+          <div style={{ gridArea: "center", alignSelf: "center", justifySelf: "center" }}>
+            <DistancePicker
+              value={shot.distance_to_flag}
+              onChange={(value) => handleFieldChange("distance_to_flag", value)}
+              styles={styles}
+            />
           </div>
-        )}
-
-        {step === 1 && (
-          <div style={styles.shotStepInner}>
-            <div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "6px",
-                }}
-              >
-                <label style={styles.label}>Miss pattern</label>
-
-                {shot.miss_pattern && (
-                  <button
-                    type="button"
-                    style={styles.removeGhostButton}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleFieldChange("miss_pattern", null)
-                    }}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: "8px",
-                }}
-              >
-                {MISS_PATTERN_GRID.flat().map((option) => {
-                  const selected = shot.miss_pattern === option.value
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      style={{
-                        ...styles.segmentedButton,
-                        minHeight: "54px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "3px",
-                        fontWeight: selected ? 700 : 500,
-                        ...(selected ? styles.segmentedActive : {}),
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleFieldChange("miss_pattern", option.value)
-                      }}
-                    >
-                      <span style={{ fontSize: "16px", lineHeight: 1 }}>
-                        {option.icon}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          lineHeight: 1.1,
-                          textAlign: "center",
-                        }}
-                      >
-                        {option.label}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div
-              style={{
-                background: "#fff7ed",
-                padding: "8px",
-                borderRadius: "12px",
-                border: "1px solid #fed7aa",
-              }}
-            >
-              <label style={styles.label}>Ball striking</label>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: "8px",
-                }}
-              >
-                {STRIKE_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    style={{
-                      ...styles.segmentedButton,
-                      minHeight: "46px",
-                      fontSize: "22px",
-                      ...(shot.strike_quality === option.value
-                        ? styles.segmentedActive
-                        : {}),
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleFieldChange("strike_quality", option.value)
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div style={styles.shotStepInner}>
-            <div>
-              <label style={styles.label}>Penalty outcome</label>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-                  gap: "8px",
-                }}
-              >
-                {PENALTY_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    style={{
-                      ...styles.segmentedButton,
-                      minHeight: "44px",
-                      fontWeight: 600,
-                      ...(shot.penalty_type === option.value
-                        ? styles.segmentedActive
-                        : {}),
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleFieldChange("penalty_type", option.value)
-                    }}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div
-              style={{
-                ...styles.shotPenaltyInfo,
-                marginTop: "4px",
-                padding: "10px 12px",
-                borderRadius: "12px",
-                background: "#f8fafc",
-                fontSize: "13px",
-                fontWeight: 600,
-              }}
-            >
-              Auto penalty: {getPenaltyFromType(shot.penalty_type)}
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
-      <div style={styles.shotStepNavRow}>
-        <button
-          type="button"
-          style={styles.secondaryButtonCompact}
-          disabled={step === 0}
-          onClick={(e) => {
-            e.stopPropagation()
-            setStep((prev) => Math.max(0, prev - 1))
-          }}
-        >
-          Back
-        </button>
+      <div style={styles.shotBottomRowCompact}>
+        <div>
+          <label style={styles.labelCompact}>Strike</label>
+          <div style={styles.strikeRowCompact}>
+            {STRIKE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                style={{
+                  ...styles.strikeButtonCompact,
+                  ...(shot.strike_quality === option.value
+                    ? styles.strikeButtonCompactActive
+                    : {}),
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleFieldChange("strike_quality", option.value)
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        <button
-          type="button"
-          style={styles.secondaryButtonCompact}
-          onClick={(e) => {
-            e.stopPropagation()
+        <div>
+          <label style={styles.labelCompact}>Penalty</label>
+          <div style={styles.penaltyCheckboxRow}>
+            {["+1", "+2"].map((value) => {
+              const checked = selectedPenalty === value
+              return (
+                <label key={value} style={styles.penaltyCheckboxWrap}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      const nextType = e.target.checked
+                        ? penaltyValueToType(value)
+                        : "None"
 
-            if (step < STEP_LABELS.length - 1) {
-              setStep((prev) => Math.min(STEP_LABELS.length - 1, prev + 1))
-            } else {
-              goToNextShot()
-            }
-          }}
-        >
-          {step < STEP_LABELS.length - 1 ? "Next" : "Next Shot"}
-        </button>
+                      handleFieldChange("penalty_type", nextType)
+
+                      if (e.target.checked) {
+                        setTimeout(() => {
+                          goToNextShot()
+                        }, 120)
+                      }
+                    }}
+                    style={styles.penaltyCheckbox}
+                  />
+                  <span style={styles.penaltyCheckboxLabel}>{value}</span>
+                </label>
+              )
+            })}
+          </div>
+        </div>
       </div>
     </div>
   )
