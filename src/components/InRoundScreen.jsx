@@ -38,7 +38,6 @@ export default function InRoundScreen({
       </div>
 
       <div style={styles.parSelectorWrapCompact}>
-        <div style={styles.labelCompact}>Par</div>
         <div style={styles.parButtonRowCompact}>
           {PAR_OPTIONS.map((option) => (
             <button

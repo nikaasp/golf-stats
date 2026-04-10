@@ -2,12 +2,12 @@ import { useEffect, useMemo } from "react"
 import DistancePicker from "./DistancePicker"
 
 const LIE_OPTIONS = [
-  { value: "Tee", color: "#dbeafe", border: "#93c5fd", text: "#1d4ed8" },
-  { value: "Fairway", color: "#dcfce7", border: "#86efac", text: "#15803d" },
-  { value: "Rough", color: "#fef3c7", border: "#fcd34d", text: "#b45309" },
-  { value: "Sand", color: "#ffedd5", border: "#fdba74", text: "#c2410c" },
-  { value: "Recovery", color: "#e5e7eb", border: "#cbd5e1", text: "#475569" },
-  { value: "Green", color: "#ccfbf1", border: "#5eead4", text: "#0f766e" },
+  { value: "Tee", color: "#d6eeca", border: "#656565", text: "#828282"},
+  { value: "Fairway", color: "#d6eeca", border: "#656565", text: "#2d5722" },
+  { value: "Rough", color: "#d6eeca", border: "#656565", text: "#11472d" },
+  { value: "Sand", color: "#d6eeca", border: "#656565", text: "#c59454" },
+  { value: "Recovery", color: "#d6eeca", border: "#656565", text: "#974a42" },
+  { value: "Green", color: "#d6eeca", border: "#656565", text: "#3fa124" },
 ]
 
 const MISS_BUTTONS = [
@@ -131,7 +131,6 @@ export default function ShotCard({
       </div>
 
       <div>
-        <label style={styles.labelCompact}>Lie</label>
         <div style={styles.lieButtonGridCompact}>
           {LIE_OPTIONS.map((option) => {
             const selected = shot.lie === option.value
@@ -160,10 +159,10 @@ export default function ShotCard({
 
       <div>
         <label style={styles.labelCompact}>
-          Distance to target
+          TARGET DISTANCE
           {showHoleLengthHint && (
             <span style={styles.inlineHintCompact}> (auto-filled)</span>
-          )}
+          )} / MISS DIRECTION
         </label>
 
         <div style={styles.resultCockpit}>
@@ -200,7 +199,7 @@ export default function ShotCard({
 
       <div style={styles.shotBottomRowCompact}>
         <div>
-          <label style={styles.labelCompact}>Strike</label>
+          <label style={styles.labelCompact}>BALL-STRIKING</label>
           <div style={styles.strikeRowCompact}>
             {STRIKE_OPTIONS.map((option) => (
               <button
@@ -224,7 +223,7 @@ export default function ShotCard({
         </div>
 
         <div>
-          <label style={styles.labelCompact}>Penalty</label>
+          <label style={styles.labelCompact}>PENALTIES</label>
           <div style={styles.penaltyCheckboxRow}>
             {["+1", "+2"].map((value) => {
               const checked = selectedPenalty === value

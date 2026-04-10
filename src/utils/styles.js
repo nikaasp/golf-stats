@@ -266,17 +266,17 @@ export const styles = {
   },
 
   parButton: {
-    minHeight: "48px",
-    borderRadius: "14px",
-    border: "1px solid #d1d5db",
+    minHeight: "24px",
+    borderRadius: "10px",
+    border: "1px solid #e84900",
     background: "white",
-    fontSize: "17px",
+    fontSize: "11px",
     fontWeight: 800,
     cursor: "pointer",
   },
 
   parButtonActive: {
-    background: "#2563eb",
+    background: "#4e5668",
     color: "white",
     border: "1px solid #2563eb",
   },
@@ -361,7 +361,7 @@ export const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    gap: "10px",
+    gap: "3px",
   },
 
   shotNumber: {
@@ -722,7 +722,7 @@ export const styles = {
     background: "#eef6ee",
     border: "1px solid #d7e7d7",
     borderRadius: "14px",
-    padding: "10px 12px",
+    padding: "8px 8px",
     minHeight: 0,
   },
 
@@ -740,7 +740,7 @@ export const styles = {
     fontSize: "12px",
     color: "#4b5563",
     fontWeight: 600,
-    lineHeight: 1.3,
+    lineHeight: 1,
   },
 
   parSelectorWrap: {
@@ -1213,7 +1213,7 @@ export const styles = {
 
   statLabelCompact: {
     marginTop: "5px",
-    fontSize: "12px",
+    fontSize: "6px",
     color: "#6b7280",
     lineHeight: 1.2,
   },
@@ -1280,7 +1280,7 @@ export const styles = {
   },
 
     parSelectorWrapCompact: {
-    marginBottom: "8px",
+    marginBottom: "4px",
   },
 
   labelCompact: {
@@ -1300,23 +1300,23 @@ export const styles = {
   parButtonRowCompact: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "6px",
+    gap: "2px",
   },
 
   parButtonCompact: {
-    minHeight: "36px",
+    minHeight: "16px",
     borderRadius: "12px",
     border: "1px solid #d1d5db",
     background: "#ffffff",
-    fontSize: "13px",
+    fontSize: "8px",
     fontWeight: 800,
     cursor: "pointer",
   },
 
   parButtonCompactActive: {
-    background: "#4f46e5",
+    background: "#3c523c",
     color: "#ffffff",
-    border: "1px solid #4f46e5",
+    border: "1px solid #787878",
   },
 
   inRoundMainCompact: {
@@ -1383,7 +1383,7 @@ export const styles = {
 
   shotCardCompact: {
     border: "1px solid #93c5fd",
-    borderRadius: "18px",
+    borderRadius: "12px",
     padding: "10px",
     background: "#f8fbff",
     display: "flex",
@@ -1400,8 +1400,8 @@ export const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: "8px",
-    minHeight: "20px",
+    gap: "3px",
+    minHeight: "5px",
   },
 
     shotHeaderLineCompact: {
@@ -1409,7 +1409,7 @@ export const styles = {
     fontWeight: 800,
     textTransform: "uppercase",
     letterSpacing: "0.05em",
-    color: "#4b5563",
+    color: "#000000",
     lineHeight: 1.1,
   },
 
@@ -1419,7 +1419,7 @@ export const styles = {
     textTransform: "uppercase",
     letterSpacing: "0.05em",
     color: "#6b7280",
-    marginBottom: "2px",
+    marginBottom: "1px",
   },
 
   shotNumberCompact: {
@@ -1472,8 +1472,8 @@ export const styles = {
     minWidth: "36px",
     borderRadius: "10px",
     border: "1px solid #cbd5e1",
-    background: "#ffffff",
-    color: "#334155",
+    background: "#fcd1d1",
+    color: "#3a424e",
     fontSize: "16px",
     fontWeight: 800,
     cursor: "pointer",
@@ -1481,7 +1481,7 @@ export const styles = {
   },
 
   resultArrowButtonActive: {
-    background: "#dbeafe",
+    background: "#fd7777",
     border: "1px solid #60a5fa",
     color: "#1d4ed8",
   },
