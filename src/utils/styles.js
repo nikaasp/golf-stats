@@ -1330,7 +1330,7 @@ export const styles = {
   inRoundFooterCompact: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "5px",
   },
 
   inRoundShotNavRowCompact: {
@@ -1346,36 +1346,39 @@ export const styles = {
   },
 
   lightBlueNavButton: {
-    minHeight: "42px",
-    borderRadius: "12px",
+    minHeight: "34px",
+    borderRadius: "10px",
     border: "1px solid #93c5fd",
     background: "#dbeafe",
     color: "#1d4ed8",
     fontWeight: 800,
-    fontSize: "14px",
+    fontSize: "13px",
     cursor: "pointer",
+    padding: "6px 10px",
   },
 
   darkBlueNavButton: {
-    minHeight: "42px",
-    borderRadius: "12px",
+    minHeight: "34px",
+    borderRadius: "10px",
     border: "1px solid #1e3a8a",
     background: "#1d4ed8",
     color: "#ffffff",
     fontWeight: 800,
-    fontSize: "14px",
+    fontSize: "13px",
     cursor: "pointer",
+    padding: "6px 10px",
   },
 
   endRoundButtonCompact: {
-    minHeight: "40px",
-    borderRadius: "12px",
+    minHeight: "34px",
+    borderRadius: "10px",
     border: "1px solid #dc2626",
     background: "#ef4444",
     color: "#ffffff",
     fontWeight: 800,
-    fontSize: "14px",
+    fontSize: "13px",
     cursor: "pointer",
+    padding: "6px 10px",
   },
 
   shotCardCompact: {
@@ -1396,8 +1399,18 @@ export const styles = {
   shotCardHeaderCompact: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: "8px",
+    minHeight: "20px",
+  },
+
+    shotHeaderLineCompact: {
+    fontSize: "11px",
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    color: "#4b5563",
+    lineHeight: 1.1,
   },
 
   shotTypeCompact: {
@@ -1423,6 +1436,7 @@ export const styles = {
     cursor: "pointer",
     fontSize: "13px",
     padding: 0,
+    lineHeight: 1,
   },
 
   lieButtonGridCompact: {

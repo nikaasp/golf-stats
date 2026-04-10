@@ -114,9 +114,8 @@ export default function ShotCard({
       onClick={setActive}
     >
       <div style={styles.shotCardHeaderCompact}>
-        <div>
-          <div style={styles.shotTypeCompact}>{shotTypeLabel}</div>
-          <div style={styles.shotNumberCompact}>Shot {index + 1}</div>
+        <div style={styles.shotHeaderLineCompact}>
+          {shotTypeLabel.toUpperCase()} #{index + 1}
         </div>
 
         <button
