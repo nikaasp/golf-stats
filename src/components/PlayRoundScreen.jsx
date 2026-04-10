@@ -1,318 +1,114 @@
-import ToggleCard from "./ToggleCard"
-import ShotCard from "./ShotCard"
-
-function getCourseName(course) {
-  if (typeof course === "string") return course
-  if (course && typeof course === "object" && course.name) return course.name
-  return ""
-}
-
-function getHoleLengthFromCourse(course, holeNumber) {
-  if (!course || typeof course !== "object") return null
-
-  const holePars = Array.isArray(course.hole_pars) ? course.hole_pars : []
-  const match = holePars.find((item) => Number(item?.hole) === Number(holeNumber))
-
-  if (!match) return null
-
-  const length =
-    match?.length_m ??
-    match?.length ??
-    null
-
-  const numericLength = Number(length)
-  return Number.isFinite(numericLength) && numericLength > 0 ? numericLength : null
-}
+import { useState } from "react"
 
 export default function PlayRoundScreen({
-  course,
-  date,
-  hole,
-  par,
-  setPar,
-  entryMode,
-  setEntryMode,
-  score,
-  setScore,
-  putts,
-  setPutts,
-  fairway,
-  setFairway,
-  gir,
-  setGir,
-  penalty,
-  setPenalty,
-  shots,
-  activeShotIndex,
-  setActiveShotIndex,
-  updateShot,
-  removeShotCard,
-  addShotCard,
-  shotTotals,
-  saveHole,
-  skipHole,
-  endRoundNow,
-  goHomeAndReset,
-  loading,
+  courses,
+  selectedCourseId,
+  setSelectedCourseId,
+  createCourse,
+  startRound,
+  goHome,
   styles,
-  holeLengthMap, // optional extra prop if parent has already built one
 }) {
-  const asNumber = (value, fallback) => {
-    const parsed = Number(value)
-    return Number.isFinite(parsed) ? parsed : fallback
+  const [newCourseName, setNewCourseName] = useState("")
+  const [tagInput, setTagInput] = useState("")
+  const [roundTags, setRoundTags] = useState([])
+
+  const addTag = () => {
+    const cleaned = tagInput.trim()
+    if (!cleaned) return
+    if (roundTags.includes(cleaned)) return
+    setRoundTags((prev) => [...prev, cleaned])
+    setTagInput("")
   }
 
-  const scoreValue = score === "" ? asNumber(par, 0) : asNumber(score, asNumber(par, 0))
-  const puttsValue = putts === "" ? 2 : asNumber(putts, 2)
-  const penaltyValue = penalty === "" ? 0 : asNumber(penalty, 0)
-
-  const currentHole = asNumber(hole, 1)
-  const totalHoles =
-    Array.isArray(course?.hole_pars) && course.hole_pars.length > 0
-      ? course.hole_pars.length
-      : 18
-
-  const currentHoleLengthFromMap = holeLengthMap?.[currentHole]
-  const currentHoleLength =
-    Number.isFinite(Number(currentHoleLengthFromMap)) && Number(currentHoleLengthFromMap) > 0
-      ? Number(currentHoleLengthFromMap)
-      : getHoleLengthFromCourse(course, currentHole)
-
-  const courseName = getCourseName(course)
-
-  const bumpValue = (setter, currentValue, delta, min = 0) => {
-    setter(String(Math.max(min, currentValue + delta)))
+  const removeTag = (tagToRemove) => {
+    setRoundTags((prev) => prev.filter((tag) => tag !== tagToRemove))
   }
 
-  const renderStepper = (label, value, onDecrement, onIncrement) => (
-    <div>
-      <label style={styles.label}>{label}</label>
-
-      <div
-        style={{
-          ...styles.input,
-          minHeight: "56px",
-          display: "grid",
-          gridTemplateColumns: "52px 1fr 52px",
-          alignItems: "center",
-          gap: "8px",
-          padding: "6px",
-        }}
-      >
-        <button type="button" style={styles.parButton} onClick={onDecrement}>
-          -
-        </button>
-
-        <div
-          style={{
-            fontSize: "22px",
-            fontWeight: 800,
-            textAlign: "center",
-          }}
-        >
-          {value}
-        </div>
-
-        <button type="button" style={styles.parButton} onClick={onIncrement}>
-          +
-        </button>
-      </div>
-    </div>
-  )
-
-console.log("PlayRoundScreen course prop:", course)
-console.log("PlayRoundScreen hole_pars:", course?.hole_pars)
-console.log("PlayRoundScreen currentHole:", currentHole)
-console.log("PlayRoundScreen currentHoleLength:", currentHoleLength)
+  const handleCreateCourse = async () => {
+    const cleaned = newCourseName.trim()
+    if (!cleaned) return
+    await createCourse(cleaned)
+    setNewCourseName("")
+  }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.mobileShell}>
-        <div style={styles.sectionCard}>
-          <div style={styles.playHeader}>
-            <div>
-              <div style={styles.playCourse}>{courseName}</div>
-              <div style={styles.playDate}>{date}</div>
-            </div>
+    <div style={styles.screenContainer}>
+      <h1 style={styles.pageTitle}>Play Round</h1>
 
-            <div style={styles.holeBadge}>
-              Hole {currentHole}/{totalHoles}
-              {Number.isFinite(Number(currentHoleLength)) && Number(currentHoleLength) > 0
-                ? ` • ${Number(currentHoleLength)} m`
-                : ""}
-            </div>
-          </div>
+      <label style={styles.label}>Existing course</label>
+      <select
+        value={selectedCourseId || ""}
+        onChange={(e) => setSelectedCourseId(e.target.value)}
+        style={styles.selectInput}
+      >
+        <option value="">Select course</option>
+        {courses.map((course) => (
+          <option key={course.id} value={course.id}>
+            {course.name}
+          </option>
+        ))}
+      </select>
 
-          <label style={styles.label}>Par</label>
+      <div style={{ height: 16 }} />
 
-          <div style={styles.parRow}>
-            {[3, 4, 5].map((parOption) => (
-              <button
-                key={parOption}
-                type="button"
-                style={{
-                  ...styles.parButton,
-                  ...(String(par) === String(parOption) ? styles.parButtonActive : {}),
-                }}
-                onClick={() => setPar(String(parOption))}
-              >
-                {parOption}
-              </button>
-            ))}
-          </div>
+      <label style={styles.label}>New course</label>
+      <div style={styles.inlineRow}>
+        <input
+          type="text"
+          value={newCourseName}
+          onChange={(e) => setNewCourseName(e.target.value)}
+          placeholder="Type course name"
+          style={styles.textInput}
+        />
+        <button type="button" style={styles.secondaryButton} onClick={handleCreateCourse}>
+          Save
+        </button>
+      </div>
 
-          <label style={styles.label}>How do you want to log this hole?</label>
+      <div style={{ height: 16 }} />
 
-          <div style={styles.segmentedWrap}>
-            <button
-              type="button"
-              style={{
-                ...styles.segmentedButton,
-                ...(entryMode === "shot_by_shot" ? styles.segmentedActive : {}),
-              }}
-              onClick={() => setEntryMode("shot_by_shot")}
-            >
-              Shot by shot
-            </button>
+      <label style={styles.label}>Round tags</label>
+      <div style={styles.inlineRow}>
+        <input
+          type="text"
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          placeholder="rainy, played with Matt..."
+          style={styles.textInput}
+        />
+        <button type="button" style={styles.secondaryButton} onClick={addTag}>
+          Add
+        </button>
+      </div>
 
-            <button
-              type="button"
-              style={{
-                ...styles.segmentedButton,
-                ...(entryMode === "score" ? styles.segmentedActive : {}),
-              }}
-              onClick={() => setEntryMode("score")}
-            >
-              Score
-            </button>
-          </div>
-        </div>
-
-        {entryMode === "score" && (
-          <div style={styles.sectionCard}>
-            <h2 style={styles.sectionTitle}>Score Mode</h2>
-
-            {renderStepper(
-              "Score",
-              scoreValue,
-              () => bumpValue(setScore, scoreValue, -1, 0),
-              () => bumpValue(setScore, scoreValue, 1, 0)
-            )}
-
-            {renderStepper(
-              "Putts",
-              puttsValue,
-              () => bumpValue(setPutts, puttsValue, -1, 0),
-              () => bumpValue(setPutts, puttsValue, 1, 0)
-            )}
-
-            <div style={styles.twoColGrid}>
-              <ToggleCard
-                label="Fairway hit"
-                value={fairway}
-                onClick={() => setFairway((v) => !v)}
-                styles={styles}
-              />
-
-              <ToggleCard
-                label="GIR"
-                value={gir}
-                onClick={() => setGir((v) => !v)}
-                styles={styles}
-              />
-            </div>
-
-            {renderStepper(
-              "Penalties",
-              penaltyValue,
-              () => bumpValue(setPenalty, penaltyValue, -1, 0),
-              () => bumpValue(setPenalty, penaltyValue, 1, 0)
-            )}
-          </div>
-        )}
-
-        {entryMode === "shot_by_shot" && (
-          <div style={styles.sectionCard}>
-            <h2 style={styles.sectionTitle}>Shot-by-Shot</h2>
-
-            <div style={styles.shotCardList}>
-              {shots.map((shot, index) => (
-                <ShotCard
-                  key={shot.id || index}
-                  shot={shot}
-                  index={index}
-                  active={activeShotIndex === index}
-                  setActive={() => setActiveShotIndex(index)}
-                  updateShot={updateShot}
-                  removeShotCard={removeShotCard}
-                  styles={styles}
-                  holeLength={currentHoleLength}
-                />
-              ))}
-            </div>
-
-            <button
-              type="button"
-              style={styles.primaryButton}
-              onClick={addShotCard}
-            >
-              + Add Shot
-            </button>
-
-            <div style={styles.summaryBox}>
-              <div style={styles.summaryInline}>
-                <span>Shots entered</span>
-                <strong>{shotTotals.shotCount}</strong>
-              </div>
-
-              <div style={styles.summaryInline}>
-                <span>Auto penalties</span>
-                <strong>{shotTotals.autoPenalty}</strong>
-              </div>
-
-              <div style={styles.summaryInline}>
-                <span>Calculated score</span>
-                <strong>{shotTotals.totalScore}</strong>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div style={styles.bottomActionBar}>
+      <div style={styles.tagRow}>
+        {roundTags.map((tag) => (
           <button
-            style={styles.primaryAction}
-            onClick={saveHole}
-            disabled={loading}
+            key={tag}
+            type="button"
+            style={styles.tagChip}
+            onClick={() => removeTag(tag)}
           >
-            {currentHole === totalHoles ? "Save & Finish" : "Save Hole"}
+            {tag} ×
           </button>
+        ))}
+      </div>
 
-          <div style={styles.secondaryActionsRow}>
-            <button
-              style={styles.secondaryAction}
-              onClick={skipHole}
-              disabled={loading}
-            >
-              Skip Hole
-            </button>
+      <div style={{ height: 20 }} />
 
-            <button
-              style={styles.dangerAction}
-              onClick={endRoundNow}
-              disabled={loading}
-            >
-              End Round
-            </button>
-          </div>
+      <div style={styles.inlineRow}>
+        <button type="button" style={styles.secondaryButton} onClick={goHome}>
+          Back
+        </button>
 
-          <button
-            style={styles.ghostAction}
-            onClick={goHomeAndReset}
-            disabled={loading}
-          >
-            Cancel Round
-          </button>
-        </div>
+        <button
+          type="button"
+          style={styles.primaryButton}
+          onClick={() => startRound({ roundTags })}
+        >
+          Play Round
+        </button>
       </div>
     </div>
   )

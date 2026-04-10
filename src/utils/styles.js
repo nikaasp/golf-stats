@@ -539,4 +539,191 @@ export const styles = {
     fontSize: "12px",
     color: "#4b5563",
   },
+  headerSparklineCard: {
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "18px",
+    padding: "14px",
+    marginBottom: "20px",
+  },
+  headerSparklineLabel: {
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#6b7280",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    marginBottom: "10px",
+  },
+  headerSparklinePlaceholder: {
+    height: "72px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "12px",
+    background: "#f9fafb",
+    color: "#111827",
+    fontSize: "13px",
+  },
+  homeButtonStack: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  selectInput: {
+    width: "100%",
+    padding: "12px 14px",
+    borderRadius: "12px",
+    border: "1px solid #d1d5db",
+    fontSize: "15px",
+    background: "#fff",
+  },
+  textInput: {
+    flex: 1,
+    padding: "12px 14px",
+    borderRadius: "12px",
+    border: "1px solid #d1d5db",
+    fontSize: "15px",
+    background: "#fff",
+  },
+  inlineRow: {
+    display: "flex",
+    gap: "10px",
+    alignItems: "center",
+  },
+  tagRow: {
+    display: "flex",
+    gap: "8px",
+    flexWrap: "wrap",
+    marginTop: "10px",
+  },
+  tagChip: {
+    border: "1px solid #d1d5db",
+    background: "#f9fafb",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontSize: "13px",
+    cursor: "pointer",
+  },
+
+  inRoundHeader: {
+    background: "#eef6ee",
+    border: "1px solid #d7e7d7",
+    borderRadius: "16px",
+    padding: "14px 16px",
+    marginBottom: "16px",
+  },
+
+  inRoundHeaderTop: {
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#1f2937",
+    marginBottom: "6px",
+  },
+
+  inRoundHeaderBottom: {
+    fontSize: "13px",
+    color: "#4b5563",
+    fontWeight: 600,
+  },
+
+  inRoundCenterWrap: {
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: "24px",
+  },
+
+  inRoundSideLeft: {
+    position: "fixed",
+    left: "20px",
+    top: "50%",
+    transform: "translateY(-50%)",
+  },
+
+  inRoundSideRight: {
+    position: "fixed",
+    right: "20px",
+    top: "50%",
+    transform: "translateY(-50%)",
+  },
+
+  sideNavButton: {
+    minHeight: "120px",
+    minWidth: "56px",
+    borderRadius: "18px",
+    border: "1px solid #cbd5e1",
+    background: "#111827",
+    color: "#ffffff",
+    fontWeight: 700,
+    padding: "12px",
+    cursor: "pointer",
+  },
+
+  inRoundBottomLeft: {
+    position: "fixed",
+    left: "20px",
+    bottom: "20px",
+  },
+
+  inRoundBottomRight: {
+    position: "fixed",
+    right: "20px",
+    bottom: "20px",
+  },
+
+  cornerNavButton: {
+    minWidth: "110px",
+    minHeight: "48px",
+    borderRadius: "14px",
+    border: "1px solid #cbd5e1",
+    background: "#ffffff",
+    color: "#111827",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
+
+  inRoundFooterInfo: {
+    marginTop: "10px",
+    fontSize: "14px",
+    color: "#4b5563",
+    fontWeight: 600,
+  },
+  parSelectorWrap: {
+  marginBottom: "16px",
+  },
+
+  parButtonRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "8px",
+  },
+  distanceWrap: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "10px",
+  },
+
+  distanceDisplay: {
+    fontSize: "22px",
+    fontWeight: 800,
+    background: "#eef2ff",
+    padding: "10px 18px",
+    borderRadius: "12px",
+    border: "1px solid #c7d2fe",
+  },
+
+  keypad: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 60px)",
+    gap: "8px",
+  },
+
+  keypadButton: {
+    height: "44px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    background: "#fff",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
 }

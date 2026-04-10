@@ -16,6 +16,7 @@ export function makeShot(shotNumber) {
     lie: getDefaultLieForShot(shotNumber),
     distance_to_flag: "",
     miss_pattern: "",
+    strike_quality: "",
     penalty_type: "None",
   }
 }

@@ -9,6 +9,7 @@ import SummaryScreen from "./components/SummaryScreen"
 import ReviewRoundScreen from "./components/ReviewRoundScreen"
 import RoundsListScreen from "./components/RoundsListScreen"
 import AnalyticsScreen from "./components/AnalyticsScreen"
+import InRoundScreen from "./components/InRoundScreen"
 
 import {
   createCourse,
@@ -116,6 +117,7 @@ function App() {
   const [isNewCourse, setIsNewCourse] = useState(true)
   const [newCoursePars, setNewCoursePars] = useState([])
 
+
   useEffect(() => {
     let mounted = true
 
@@ -168,7 +170,7 @@ function App() {
   }, [selectedCourseId, courses])
 
   useEffect(() => {
-    if (screen !== "play") return
+    if (screen !== "inRound") return
     if (isNewCourse) return
     if (!selectedCourseData?.hole_pars?.length) return
 
@@ -233,8 +235,54 @@ function App() {
       length_m: holeLength,
     })
   }
+  async function handleCreateCourse(courseName) {
+    if (!session?.user) {
+      alert("Please log in first")
+      return
+    }
 
-  async function startRound() {
+    const cleaned = String(courseName || "").trim()
+    if (!cleaned) {
+      alert("Please enter a course name")
+      return
+    }
+
+    const existing = courses.find(
+      (c) => c.name?.trim().toLowerCase() === cleaned.toLowerCase()
+    )
+
+    if (existing) {
+      setSelectedCourseId(existing.id)
+      setSelectedCourseData(existing)
+      setIsNewCourse(false)
+      setCourse(existing.name)
+      return
+    }
+
+    const { data, error } = await createCourse({
+      user_id: session.user.id,
+      name: cleaned,
+      hole_pars: [],
+      last_played_at: null,
+    })
+
+    if (error) {
+      alert("Could not create course: " + error.message)
+      return
+    }
+
+    await loadCourses()
+
+    const newCourseId = data?.[0]?.id
+    if (newCourseId) {
+      setSelectedCourseId(newCourseId)
+      setIsNewCourse(false)
+      setCourse(cleaned)
+    }
+  }
+
+  async function handleStartRound(roundTags = []) {
+    console.log("Round tags:", roundTags)
     if (isNewCourse) {
       if (!course.trim()) {
         alert("Please enter a course name")
@@ -290,7 +338,7 @@ function App() {
     setEntryMode("")
     resetScoreInputs()
     resetShotInputs()
-    setScreen("play")
+    setScreen("inRound")
   }
 
   function resetScoreInputs() {
@@ -747,6 +795,17 @@ function App() {
     [selectedReviewShots]
   )
 
+  const currentCourseHoleData = useMemo(() => {
+    if (!selectedCourseData?.hole_pars?.length) return null
+    return (
+      selectedCourseData.hole_pars.find(
+        (h) => Number(h.hole) === Number(hole)
+      ) || null
+    )
+  }, [selectedCourseData, hole])
+
+  const currentHoleLength = currentCourseHoleData?.length_m ?? null
+
   if (authLoading) {
     return (
       <div className="app-shell">
@@ -769,26 +828,78 @@ function App() {
     return (
       <div className="app-shell">
         <HomeScreen
-          course={course}
-          date={date}
-          setCourse={setCourse}
-          setDate={setDate}
-          startRound={startRound}
-          loading={loading}
           styles={styles}
-          session={session}
-          signOut={signOut}
-          courses={courses}
-          selectedCourseId={selectedCourseId}
-          setSelectedCourseId={setSelectedCourseId}
-          isNewCourse={isNewCourse}
-          setIsNewCourse={setIsNewCourse}
+          goToPlayRound={() => setScreen("playRound")}
           goToRounds={() => setScreen("rounds")}
           goToAnalytics={() => setScreen("analytics")}
         />
       </div>
     )
   }
+
+  if (screen === "playRound") {
+    return (
+      <div className="app-shell">
+        <PlayRoundScreen
+          styles={styles}
+          courses={courses}
+          selectedCourseId={selectedCourseId}
+          setSelectedCourseId={(value) => {
+            setSelectedCourseId(value)
+            setIsNewCourse(!value)
+            if (value) {
+              const selected = courses.find((c) => c.id === value) || null
+              setSelectedCourseData(selected)
+              setCourse(selected?.name || "")
+            } else {
+              setSelectedCourseData(null)
+              setCourse("")
+            }
+          }}
+          createCourse={handleCreateCourse}
+          goHome={() => setScreen("home")}
+          startRound={({ roundTags }) => handleStartRound(roundTags)}
+        />
+      </div>
+    )
+  }
+
+  if (screen === "inRound") {
+    return (
+      <div className="app-shell">
+        <InRoundScreen
+          styles={styles}
+          course={course}
+          date={date}
+          hole={hole}
+          par={par}
+          setPar={setPar}
+          shots={shots}
+          activeShotIndex={activeShotIndex}
+          setActiveShotIndex={setActiveShotIndex}
+          updateShot={updateShot}
+          removeShotCard={removeShotCard}
+          addShotCard={addShotCard}
+          shotTotals={shotTotals}
+          goHomeAndReset={goHomeAndReset}
+          holeLength={currentHoleLength}   // 👈 ADD THIS LINE
+          goToPrevHole={() => {
+            if (hole > 1) {
+              setHole((prev) => prev - 1)
+              resetShotInputs()
+            }
+          }}
+          goToNextHole={() => {
+            if (hole < 18) {
+              setHole((prev) => prev + 1)
+              resetShotInputs()
+            }
+          }}
+        />
+      </div>
+    )
+  }
+
 
   if (screen === "rounds") {
     return (
@@ -849,42 +960,7 @@ function App() {
     )
   }
 
-  return (
-    <div className="app-shell">
-      <PlayRoundScreen
-        course={selectedCourseData || course}
-        date={date}
-        hole={hole}
-        par={par}
-        setPar={setPar}
-        entryMode={entryMode}
-        setEntryMode={setEntryMode}
-        score={score}
-        setScore={setScore}
-        putts={putts}
-        setPutts={setPutts}
-        fairway={fairway}
-        setFairway={setFairway}
-        gir={gir}
-        setGir={setGir}
-        penalty={penalty}
-        setPenalty={setPenalty}
-        shots={shots}
-        activeShotIndex={activeShotIndex}
-        setActiveShotIndex={setActiveShotIndex}
-        updateShot={updateShot}
-        removeShotCard={removeShotCard}
-        addShotCard={addShotCard}
-        shotTotals={shotTotals}
-        saveHole={saveHole}
-        skipHole={skipHole}
-        endRoundNow={endRoundNow}
-        goHomeAndReset={goHomeAndReset}
-        loading={loading}
-        styles={styles}
-      />
-    </div>
-  )
+  return null
 }
 
 export default App

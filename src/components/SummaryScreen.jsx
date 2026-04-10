@@ -51,12 +51,12 @@ export default function SummaryScreen({
   }
 
   const fwChart = [
-    { label: "Hit", value: summary.fwHits, color: "#116f23" },
+    { label: "Hit", value: summary.fwHits, color: "#e6aa06" },
     { label: "Miss", value: summary.fwMisses, color: "#636363" },
   ]
 
   const girChart = [
-    { label: "GIR", value: summary.girHits, color: "#f83cff" },
+    { label: "GIR", value: summary.girHits, color: "#4ab140" },
     { label: "No GIR", value: summary.girMisses, color: "#636363" },
   ]
 
