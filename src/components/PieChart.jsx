@@ -1,10 +1,10 @@
-export default function PieChart({ title, data, styles }) {
+export default function PieChart({ title, data = [], styles }) {
   const total = data.reduce((s, d) => s + d.value, 0)
 
   if (total === 0) {
     return (
-      <div style={styles.chartCard}>
-        <div style={styles.chartTitle}>{title}</div>
+      <div style={styles.chartCardCompact}>
+        <div style={styles.chartTitleCompact}>{title}</div>
         <div style={styles.noData}>No data</div>
       </div>
     )
@@ -21,22 +21,25 @@ export default function PieChart({ title, data, styles }) {
     .join(", ")
 
   return (
-    <div style={styles.chartCard}>
-      <div style={styles.chartTitle}>{title}</div>
-      <div style={styles.chartWrap}>
+    <div style={styles.chartCardCompact}>
+      <div style={styles.chartTitleCompact}>{title}</div>
+
+      <div style={styles.chartWrapCompact}>
         <div
           style={{
-            ...styles.pie,
+            ...styles.pieCompact,
             background: `conic-gradient(${gradientStops})`,
           }}
         />
-        <div style={styles.legend}>
+
+        <div style={styles.legendCompact}>
           {data.map((d) => {
-            const pct = ((d.value / total) * 100).toFixed(1)
+            const pct = ((d.value / total) * 100).toFixed(0)
+
             return (
-              <div key={d.label} style={styles.legendRow}>
+              <div key={d.label} style={styles.legendRowCompact}>
                 <span style={{ ...styles.legendSwatch, background: d.color }} />
-                <span style={styles.legendText}>
+                <span style={styles.legendTextCompact}>
                   {d.label}: {pct}% ({d.value})
                 </span>
               </div>

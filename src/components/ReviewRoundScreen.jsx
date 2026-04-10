@@ -1,9 +1,9 @@
+import { useMemo, useState } from "react"
 import StatCard from "./StatCard"
 import PieChart from "./PieChart"
 import Scorecard from "./Scorecard"
 import { formatToPar } from "../utils/golfFormatters"
 import { buildMissPatternByCategoryFromShots } from "../utils/analyticsTransforms"
-
 import {
   MISS_PATTERN_LABELS,
   MISS_PATTERN_ORDER,
@@ -50,6 +50,9 @@ export default function ReviewRoundScreen({
   goHome,
   styles,
 }) {
+  const [page, setPage] = useState(0)
+  const pages = ["Overview", "Scorecard", "Charts"]
+
   const fwChart = [
     { label: "Hit", value: reviewSummary.fwHits, color: "#2563eb" },
     { label: "Miss", value: reviewSummary.fwMisses, color: "#cbd5e1" },
@@ -60,109 +63,159 @@ export default function ReviewRoundScreen({
     { label: "No GIR", value: reviewSummary.girMisses, color: "#d1d5db" },
   ]
 
-  const missPatternByCategoryRaw = buildMissPatternByCategoryFromShots(selectedReviewShots)
+  const missPatternSections = useMemo(() => {
+    const missPatternByCategoryRaw = buildMissPatternByCategoryFromShots(selectedReviewShots)
 
-  const mergedMissPatternByCategory = Object.entries(missPatternByCategoryRaw).reduce(
-    (acc, [category, counts]) => {
-      const normalizedCategory = category === "Putting" ? "On green" : category
+    const mergedMissPatternByCategory = Object.entries(missPatternByCategoryRaw).reduce(
+      (acc, [category, counts]) => {
+        const normalizedCategory = category === "Putting" ? "On green" : category
 
-      if (!acc[normalizedCategory]) {
-        acc[normalizedCategory] = {}
-      }
+        if (!acc[normalizedCategory]) {
+          acc[normalizedCategory] = {}
+        }
 
-      for (const key of MISS_PATTERN_ORDER) {
-        acc[normalizedCategory][key] =
-          Number(acc[normalizedCategory][key] || 0) + Number(counts?.[key] || 0)
-      }
+        for (const key of MISS_PATTERN_ORDER) {
+          acc[normalizedCategory][key] =
+            Number(acc[normalizedCategory][key] || 0) + Number(counts?.[key] || 0)
+        }
 
-      return acc
-    },
-    {}
-  )
+        return acc
+      },
+      {}
+    )
 
-  const missPatternSections = Object.entries(mergedMissPatternByCategory)
-    .map(([category, counts]) => {
-      const total = getMissPatternTotal(counts)
-
-      return {
-        category,
-        label: CATEGORY_LABELS[category] || category,
-        total,
-        data: countsToPieChartData(counts),
-      }
-    })
-    .filter((section) => section.total > 0 && section.data.length > 0)
+    return Object.entries(mergedMissPatternByCategory)
+      .map(([category, counts]) => {
+        const total = getMissPatternTotal(counts)
+        return {
+          category,
+          label: CATEGORY_LABELS[category] || category,
+          total,
+          data: countsToPieChartData(counts),
+        }
+      })
+      .filter((section) => section.total > 0 && section.data.length > 0)
+  }, [selectedReviewShots])
 
   return (
-    <div style={styles.page}>
-      <div style={styles.mobileShell}>
-        <div style={styles.sectionCard}>
-          <h1 style={styles.heroTitle}>Review Round</h1>
+    <div style={styles.fixedScreen}>
+      <div style={styles.fixedTopSection}>
+        <div style={styles.sectionCardCompact}>
+          <h1 style={styles.pageTitle}>Review Round</h1>
           <p style={styles.mutedText}>
             {selectedReviewRound?.course} • {selectedReviewRound?.date}
           </p>
-
-          <div style={styles.statsGrid}>
-            <StatCard label="Score" value={reviewSummary.totalScore} styles={styles} />
-            <StatCard
-              label="To Par"
-              value={formatToPar(reviewSummary.totalScore, reviewSummary.totalPar)}
-              styles={styles}
-            />
-            <StatCard
-              label="Avg Putts"
-              value={
-                reviewSummary.playedCount > 0
-                  ? (reviewSummary.totalPutts / reviewSummary.playedCount).toFixed(1)
-                  : "-"
-              }
-              styles={styles}
-            />
-            <StatCard label="Avg Par 3" value={reviewSummary.avgPar3} styles={styles} />
-            <StatCard label="Avg Par 4" value={reviewSummary.avgPar4} styles={styles} />
-            <StatCard label="Avg Par 5" value={reviewSummary.avgPar5} styles={styles} />
+          <div style={styles.screenStepPills}>
+            {pages.map((label, index) => (
+              <div
+                key={label}
+                style={{
+                  ...styles.screenStepPill,
+                  ...(page === index ? styles.screenStepPillActive : {}),
+                }}
+              >
+                {label}
+              </div>
+            ))}
           </div>
         </div>
+      </div>
 
-        <div style={styles.sectionCard}>
-          <h2 style={styles.sectionTitle}>Scorecard</h2>
-          <Scorecard holes={reviewSummary.holes} styles={styles} />
-        </div>
-
-        <PieChart title="Fairways" data={fwChart} styles={styles} />
-        <PieChart title="GIR" data={girChart} styles={styles} />
-
-        <div style={styles.sectionCard}>
-          <h2 style={styles.sectionTitle}>Miss Pattern by Category</h2>
-
-          {missPatternSections.length === 0 ? (
-            <p style={styles.mutedText}>No miss pattern data for this round.</p>
-          ) : (
-            <div style={{ display: "grid", gap: 20 }}>
-              {missPatternSections.map((section) => (
-                <PieChart
-                  key={section.category}
-                  title={section.label}
-                  data={section.data}
-                  styles={styles}
-                />
-              ))}
+      <div style={styles.fixedMainSection}>
+        {page === 0 && (
+          <div style={styles.sectionCardCompact}>
+            <div style={styles.statsGrid}>
+              <StatCard label="Score" value={reviewSummary.totalScore} styles={styles} />
+              <StatCard
+                label="To Par"
+                value={formatToPar(reviewSummary.totalScore, reviewSummary.totalPar)}
+                styles={styles}
+              />
+              <StatCard
+                label="Avg Putts"
+                value={
+                  reviewSummary.playedCount > 0
+                    ? (reviewSummary.totalPutts / reviewSummary.playedCount).toFixed(1)
+                    : "-"
+                }
+                styles={styles}
+              />
+              <StatCard label="Avg Par 3" value={reviewSummary.avgPar3} styles={styles} />
+              <StatCard label="Avg Par 4" value={reviewSummary.avgPar4} styles={styles} />
+              <StatCard label="Avg Par 5" value={reviewSummary.avgPar5} styles={styles} />
             </div>
-          )}
+          </div>
+        )}
+
+        {page === 1 && (
+          <div style={styles.sectionCardCompact}>
+            <h2 style={styles.sectionTitle}>Scorecard</h2>
+            <Scorecard holes={reviewSummary.holes} styles={styles} />
+          </div>
+        )}
+
+        {page === 2 && (
+          <div style={styles.fixedChartGrid}>
+            <PieChart title="Fairways" data={fwChart} styles={styles} />
+            <PieChart title="GIR" data={girChart} styles={styles} />
+
+            <div style={styles.sectionCardCompact}>
+              <h2 style={styles.sectionTitle}>Miss Pattern by Category</h2>
+
+              {missPatternSections.length === 0 ? (
+                <p style={styles.mutedText}>No miss pattern data for this round.</p>
+              ) : (
+                <div style={styles.fixedChartGrid}>
+                  {missPatternSections.slice(0, 2).map((section) => (
+                    <PieChart
+                      key={section.category}
+                      title={section.label}
+                      data={section.data}
+                      styles={styles}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={styles.fixedBottomSection}>
+        <div style={styles.bottomNavRowThree}>
+          <button
+            style={styles.secondaryButton}
+            onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+            disabled={page === 0}
+          >
+            Back
+          </button>
+
+          <button style={styles.secondaryButton} onClick={goHome}>
+            Home
+          </button>
+
+          <button
+            style={styles.primaryButton}
+            onClick={() => {
+              if (page < pages.length - 1) {
+                setPage((prev) => prev + 1)
+              } else {
+                goHome()
+              }
+            }}
+          >
+            {page < pages.length - 1 ? "Next" : "Done"}
+          </button>
         </div>
 
-        <div style={styles.buttonRow}>
-          <button style={styles.primaryButton} onClick={goHome}>
-            Back to Home
-          </button>
-          <button
-            style={styles.deleteRoundButtonLarge}
-            onClick={() => deleteRound(selectedReviewRound)}
-            disabled={loading}
-          >
-            Delete Round
-          </button>
-        </div>
+        <button
+          style={styles.deleteRoundButtonLarge}
+          onClick={() => deleteRound(selectedReviewRound)}
+          disabled={loading}
+        >
+          Delete Round
+        </button>
       </div>
     </div>
   )

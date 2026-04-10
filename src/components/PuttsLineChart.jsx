@@ -21,22 +21,23 @@ function formatDateLabel(dateStr) {
 
 export default function PuttsLineChart({ data, styles }) {
   return (
-    <div style={styles.sectionCard}>
-      <h2 style={styles.sectionTitle}>Average Putts per Round Over Time</h2>
+    <div style={styles.sectionCardCompact}>
+      <h2 style={styles.sectionTitle}>Average Putts per Round</h2>
 
-      <div style={{ width: "100%", height: 320 }}>
+      <div style={{ width: "100%", height: 190 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
-            margin={{ top: 12, right: 12, left: 0, bottom: 8 }}
+            margin={{ top: 8, right: 8, left: -18, bottom: 4 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
               tickFormatter={formatDateLabel}
-              minTickGap={24}
+              minTickGap={28}
+              tick={{ fontSize: 10 }}
             />
-            <YAxis />
+            <YAxis tick={{ fontSize: 10 }} />
             <Tooltip
               labelFormatter={(label) => formatDateLabel(label)}
               formatter={(value, name) => [
@@ -44,7 +45,7 @@ export default function PuttsLineChart({ data, styles }) {
                 name,
               ]}
             />
-            <Legend />
+            <Legend wrapperStyle={{ fontSize: "11px" }} />
             <Line
               type="monotone"
               dataKey="avgPutts"
@@ -52,8 +53,8 @@ export default function PuttsLineChart({ data, styles }) {
               stroke="#803c87"
               strokeWidth={2}
               connectNulls
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 2.5 }}
+              activeDot={{ r: 4 }}
             />
           </LineChart>
         </ResponsiveContainer>

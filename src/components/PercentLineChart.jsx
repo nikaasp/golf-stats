@@ -21,22 +21,26 @@ function formatDateLabel(dateStr) {
 
 export default function PercentLineChart({ data, styles }) {
   return (
-    <div style={styles.sectionCard}>
-      <h2 style={styles.sectionTitle}>Fairway % and GIR % Over Time</h2>
+    <div style={styles.sectionCardCompact}>
+      <h2 style={styles.sectionTitle}>Fairway % and GIR %</h2>
 
-      <div style={{ width: "100%", height: 320 }}>
+      <div style={{ width: "100%", height: 190 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
-            margin={{ top: 12, right: 12, left: 0, bottom: 8 }}
+            margin={{ top: 8, right: 8, left: -18, bottom: 4 }}
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis
               dataKey="date"
               tickFormatter={formatDateLabel}
-              minTickGap={24}
+              minTickGap={28}
+              tick={{ fontSize: 10 }}
             />
-            <YAxis domain={[0, 100]} />
+            <YAxis
+              domain={[0, 100]}
+              tick={{ fontSize: 10 }}
+            />
             <Tooltip
               labelFormatter={(label) => formatDateLabel(label)}
               formatter={(value, name) => [
@@ -44,7 +48,7 @@ export default function PercentLineChart({ data, styles }) {
                 name,
               ]}
             />
-            <Legend />
+            <Legend wrapperStyle={{ fontSize: "11px" }} />
             <Line
               type="monotone"
               dataKey="fairwayPct"
@@ -52,8 +56,8 @@ export default function PercentLineChart({ data, styles }) {
               stroke="#e6aa06"
               strokeWidth={2}
               connectNulls
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 2.5 }}
+              activeDot={{ r: 4 }}
             />
             <Line
               type="monotone"
@@ -62,8 +66,8 @@ export default function PercentLineChart({ data, styles }) {
               stroke="#4ab140"
               strokeWidth={2}
               connectNulls
-              dot={{ r: 3 }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 2.5 }}
+              activeDot={{ r: 4 }}
             />
           </LineChart>
         </ResponsiveContainer>

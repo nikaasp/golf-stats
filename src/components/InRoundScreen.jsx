@@ -23,18 +23,21 @@ export default function InRoundScreen({
 }) {
   const activeShot = shots?.[activeShotIndex] || null
   const shotNumber = activeShotIndex + 1
-    const teeToFlag =
-    Number(holeLength) > 0 ? `${Number(holeLength)} m` : "-"
+  const totalShots = shots?.length || 0
+  const teeToFlag = Number(holeLength) > 0 ? `${Number(holeLength)} m` : "-"
+
+  const isFirstShot = activeShotIndex <= 0
+  const isLastShot = activeShotIndex >= totalShots - 1
 
   return (
     <div style={styles.screenContainer}>
       <div style={styles.inRoundHeader}>
         <div style={styles.inRoundHeaderTop}>
-          {course || "Course"} | {date}
+          {course || "Course"} · {date}
         </div>
 
         <div style={styles.inRoundHeaderBottom}>
-          Hole {hole} | Par {par || "-"} | Tee to flag {teeToFlag} | Shot {shotNumber}
+          Hole {hole} · Par {par || "-"} · Tee to flag {teeToFlag}
         </div>
       </div>
 
@@ -57,64 +60,80 @@ export default function InRoundScreen({
         </div>
       </div>
 
-      <div style={styles.inRoundCenterWrap}>
-        {activeShot && (
-          <ShotCard
-            shot={activeShot}
-            index={activeShotIndex}
-            active
-            setActive={() => {}}
-            updateShot={updateShot}
-            removeShotCard={removeShotCard}
-            styles={styles}
-            holeLength={activeShotIndex === 0 ? shots?.[0]?.distance_to_flag : null}
-          />
-        )}
+      <div style={styles.inRoundMain}>
+        <div style={styles.inRoundMetaRow}>
+          <div style={styles.inRoundMetaCard}>
+            <div style={styles.inRoundMetaLabel}>Active shot</div>
+            <div style={styles.inRoundMetaValue}>
+              {shotNumber} / {Math.max(totalShots, 1)}
+            </div>
+          </div>
+
+          <div style={styles.inRoundMetaCard}>
+            <div style={styles.inRoundMetaLabel}>Strokes so far</div>
+            <div style={styles.inRoundMetaValue}>
+              {shotTotals?.totalScore ?? totalShots}
+            </div>
+          </div>
+        </div>
+
+        <div style={styles.inRoundCenterWrap}>
+          <div style={styles.inRoundShotCardWrap}>
+            {activeShot && (
+              <ShotCard
+                shot={activeShot}
+                index={activeShotIndex}
+                shotCount={totalShots}
+                active
+                setActive={() => {}}
+                updateShot={updateShot}
+                removeShotCard={removeShotCard}
+                addShotCard={addShotCard}
+                setActiveShotIndex={setActiveShotIndex}
+                styles={styles}
+                holeLength={activeShotIndex === 0 ? holeLength : null}
+              />
+            )}
+          </div>
+        </div>
       </div>
 
-      <div style={styles.inRoundSideLeft}>
-        <button
-          type="button"
-          style={styles.sideNavButton}
-          onClick={() => setActiveShotIndex((prev) => Math.max(0, prev - 1))}
-        >
-          Prev Shot
-        </button>
-      </div>
+      <div style={styles.inRoundFooter}>
+        <div style={styles.inRoundShotNavRow}>
+          <button
+            type="button"
+            style={styles.sideNavButton}
+            onClick={() => setActiveShotIndex((prev) => Math.max(0, prev - 1))}
+            disabled={isFirstShot}
+          >
+            Prev Shot
+          </button>
 
-      <div style={styles.inRoundSideRight}>
-        <button
-          type="button"
-          style={styles.sideNavButton}
-          onClick={() => {
-            if (activeShotIndex === shots.length - 1) {
-              addShotCard()
-            } else {
-              setActiveShotIndex((prev) => prev + 1)
-            }
-          }}
-        >
-          Next Shot
-        </button>
-      </div>
+          <button
+            type="button"
+            style={styles.sideNavButton}
+            onClick={() => {
+              if (isLastShot) {
+                addShotCard()
+              } else {
+                setActiveShotIndex((prev) => prev + 1)
+              }
+            }}
+          >
+            {isLastShot ? "Add / Next Shot" : "Next Shot"}
+          </button>
+        </div>
 
-      <div style={styles.inRoundBottomLeft}>
-        <button type="button" style={styles.cornerNavButton} onClick={goToPrevHole}>
-          Prev Hole
-        </button>
-      </div>
+        <div style={styles.inRoundHoleNavRow}>
+          <button type="button" style={styles.cornerNavButton} onClick={goToPrevHole}>
+            Prev Hole
+          </button>
 
-      <div style={styles.inRoundBottomRight}>
-        <button type="button" style={styles.cornerNavButton} onClick={goToNextHole}>
-          Next Hole
-        </button>
-      </div>
+          <button type="button" style={styles.cornerNavButton} onClick={goToNextHole}>
+            Next Hole
+          </button>
+        </div>
 
-      <div style={styles.inRoundFooterInfo}>
-        Total strokes so far: {shotTotals?.totalScore ?? shots.length}
-      </div>
-
-      <div style={{ marginTop: 20 }}>
         <button type="button" style={styles.secondaryButton} onClick={goHomeAndReset}>
           End Round
         </button>

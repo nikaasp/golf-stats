@@ -1,8 +1,8 @@
 export default function StatCard({ label, value, styles }) {
   return (
-    <div style={styles.statCard}>
-      <div style={styles.statValue}>{value}</div>
-      <div style={styles.statLabel}>{label}</div>
+    <div style={styles.statCardCompact}>
+      <div style={styles.statValueCompact}>{value}</div>
+      <div style={styles.statLabelCompact}>{label}</div>
     </div>
   )
 }

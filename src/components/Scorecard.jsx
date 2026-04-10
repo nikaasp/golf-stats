@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react"
 import { formatToPar, scoreLabel } from "../utils/golfFormatters"
 
 function scoreStyle(score, par, styles) {
@@ -10,49 +11,89 @@ function scoreStyle(score, par, styles) {
   return styles.scoreDouble
 }
 
-export default function Scorecard({ holes, styles }) {
-  const front = holes.filter((h) => h.hole_number <= 9)
-  const back = holes.filter((h) => h.hole_number >= 10)
+export default function Scorecard({ holes = [], styles }) {
+  const [nine, setNine] = useState("front")
 
-  const renderNine = (label, list) => {
-    const score = list.reduce((s, h) => s + (h.score || 0), 0)
-    const par = list.reduce((s, h) => s + (h.par || 0), 0)
+  const front = useMemo(
+    () => holes.filter((h) => h.hole_number <= 9),
+    [holes]
+  )
 
-    return (
-      <div style={styles.scorecardSection}>
-        <div style={styles.scorecardHeaderRow}>
-          <div style={styles.scorecardTitle}>{label}</div>
-          <div style={styles.scorecardSubtotal}>
-            {score} ({formatToPar(score, par)})
-          </div>
-        </div>
+  const back = useMemo(
+    () => holes.filter((h) => h.hole_number >= 10),
+    [holes]
+  )
 
-        <div style={styles.scorecardGrid}>
-          {list.map((h) => (
-            <div key={h.id} style={styles.scoreCell}>
-              <div style={styles.scoreHoleNo}>Hole {h.hole_number} (Par {h.par ?? "-"})</div>
-              <div style={{ ...styles.scoreBadge, ...scoreStyle(h.score, h.par, styles) }}>
-                {h.score}
-              </div>
-              <div style={styles.scoreSymbol}>{scoreLabel(h.score, h.par)}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  const list = nine === "front" ? front : back
+  const label = nine === "front" ? "Front 9" : "Back 9"
+
+  const totalScore = list.reduce((s, h) => s + (h.score || 0), 0)
+  const totalPar = list.reduce((s, h) => s + (h.par || 0), 0)
 
   return (
-    <>
-      {renderNine("Front 9", front)}
-      {renderNine("Back 9", back)}
-      <div style={styles.scoreLegend}>
-        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreEagle }}>E</span> Eagle+
-        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreBirdie }}>B</span> Birdie
-        <span style={{ ...styles.scoreBadgeSmall, ...styles.scorePar }}>P</span> Par
-        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreBogey }}>Bo</span> Bogey
-        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreDouble }}>D</span> Double+
+    <div style={styles.scorecardCompactWrap}>
+      <div style={styles.scorecardHeaderRow}>
+        <div style={styles.scorecardTitle}>{label}</div>
+        <div style={styles.scorecardSubtotal}>
+          {totalScore} ({formatToPar(totalScore, totalPar)})
+        </div>
       </div>
-    </>
+
+      <div style={styles.scorecardToggleRow}>
+        <button
+          type="button"
+          style={{
+            ...styles.segmentedButton,
+            ...(nine === "front" ? styles.segmentedActive : {}),
+          }}
+          onClick={() => setNine("front")}
+        >
+          Front 9
+        </button>
+
+        <button
+          type="button"
+          style={{
+            ...styles.segmentedButton,
+            ...(nine === "back" ? styles.segmentedActive : {}),
+          }}
+          onClick={() => setNine("back")}
+        >
+          Back 9
+        </button>
+      </div>
+
+      <div style={styles.scorecardCompactGrid}>
+        {list.map((h) => (
+          <div key={h.id} style={styles.scoreCellCompact}>
+            <div style={styles.scoreHoleNoCompact}>H{h.hole_number}</div>
+
+            <div style={{ ...styles.scoreBadgeCompact, ...scoreStyle(h.score, h.par, styles) }}>
+              {h.score ?? "-"}
+            </div>
+
+            <div style={styles.scoreParCompact}>P{h.par ?? "-"}</div>
+            <div style={styles.scoreSymbolCompact}>{scoreLabel(h.score, h.par)}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={styles.scoreLegendCompact}>
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreEagle }}>E</span>
+        <span>Eagle+</span>
+
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreBirdie }}>B</span>
+        <span>Birdie</span>
+
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scorePar }}>P</span>
+        <span>Par</span>
+
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreBogey }}>Bo</span>
+        <span>Bogey</span>
+
+        <span style={{ ...styles.scoreBadgeSmall, ...styles.scoreDouble }}>D</span>
+        <span>Double+</span>
+      </div>
+    </div>
   )
 }

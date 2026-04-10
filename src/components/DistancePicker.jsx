@@ -1,32 +1,56 @@
 export default function DistancePicker({ value, onChange, styles }) {
+  const safeValue = value === null || value === undefined ? "" : String(value)
+
   const handleNumber = (num) => {
-    const next = `${value || ""}${num}`
+    const next = `${safeValue}${num}`.replace(/^0+(\d)/, "$1")
     onChange(next)
   }
 
   const handleClear = () => onChange("")
-  const handleBack = () => onChange(String(value || "").slice(0, -1))
+  const handleBack = () => onChange(safeValue.slice(0, -1))
 
   return (
-    <div style={styles.distanceWrap}>
-      <div style={styles.distanceDisplay}>
-        {value || "--"} <span style={{ fontSize: 12 }}>m</span>
+    <div style={styles.distanceWrapCompact}>
+      <div style={styles.distanceDisplayCompact}>
+        <span>{safeValue || "--"}</span>
+        <span style={styles.distanceUnitCompact}>m</span>
       </div>
 
-      <div style={styles.keypad}>
-        {[1,2,3,4,5,6,7,8,9].map((n) => (
+      <div style={styles.keypadCompact}>
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
           <button
             key={n}
-            style={styles.keypadButton}
+            type="button"
+            style={styles.keypadButtonCompact}
             onClick={() => handleNumber(n)}
           >
             {n}
           </button>
         ))}
 
-        <button style={styles.keypadButton} onClick={handleClear}>C</button>
-        <button style={styles.keypadButton} onClick={() => handleNumber(0)}>0</button>
-        <button style={styles.keypadButton} onClick={handleBack}>⌫</button>
+        <button
+          type="button"
+          style={styles.keypadButtonCompactSecondary}
+          onClick={handleClear}
+        >
+          C
+        </button>
+
+        <button
+          type="button"
+          style={styles.keypadButtonCompact}
+          onClick={() => handleNumber(0)}
+        >
+          0
+        </button>
+
+        <button
+          type="button"
+          style={styles.keypadButtonCompactSecondary}
+          onClick={handleBack}
+        >
+          ⌫
+        </button>
       </div>
     </div>
   )

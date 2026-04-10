@@ -33,13 +33,16 @@ body,
   margin: 0;
   padding: 0;
   min-width: 320px;
-  min-height: 100%;
   width: 100%;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
+  overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 a {
@@ -114,9 +117,13 @@ img {
 /* App layout */
 .app-shell {
   width: 100%;
-  max-width: 720px;
+  max-width: 430px;
+  height: 100dvh;
   margin: 0 auto;
-  padding: 16px;
+  padding: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .card,
@@ -153,7 +160,6 @@ img {
   margin-top: 4px;
 }
 
-/* Compact rows */
 .row {
   display: grid;
   gap: 10px;
@@ -167,14 +173,12 @@ img {
   grid-template-columns: 1fr 1fr 1fr;
 }
 
-/* Shot summary line */
 .shot-summary {
   font-size: 0.9rem;
   color: var(--muted);
   margin-bottom: 10px;
 }
 
-/* Miss Pattern */
 .miss-pattern-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -219,7 +223,6 @@ img {
   line-height: 1.15;
 }
 
-/* Small utility buttons */
 .button-primary {
   background: var(--primary);
   color: white;
@@ -242,10 +245,9 @@ img {
   border-color: #fca5a5;
 }
 
-/* Responsive */
 @media (max-width: 640px) {
   .app-shell {
-    padding: 12px;
+    padding: 8px;
   }
 
   .row.two,

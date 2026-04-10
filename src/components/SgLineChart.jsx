@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect } from "react"
-
 import { SG_SERIES } from "../utils/sgConfig"
 
 function formatDateLabel(dateStr, includeYear = false) {
@@ -17,12 +16,10 @@ function formatDateLabel(dateStr, includeYear = false) {
 function getXAxisLabelIndices(data) {
   const n = data.length
   if (n <= 1) return [0]
-  if (n <= 6) return Array.from({ length: n }, (_, i) => i)
+  if (n <= 5) return Array.from({ length: n }, (_, i) => i)
 
-  // target roughly 5 labels
-  const targetLabels = 5
+  const targetLabels = 4
   const step = Math.ceil((n - 1) / (targetLabels - 1))
-
   const indices = new Set([0, n - 1])
 
   for (let i = 0; i < n; i += step) {
@@ -34,23 +31,11 @@ function getXAxisLabelIndices(data) {
 
 function buildXAxisLabels(data) {
   const labelIndices = new Set(getXAxisLabelIndices(data))
-  const seenDates = new Set()
-
   return data.map((row, i) => {
     if (!labelIndices.has(i)) return ""
-
-    const raw = row?.date || ""
-    const basicLabel = formatDateLabel(raw)
-    const fullLabel = formatDateLabel(raw, true)
-
-    // If same formatted date appears multiple times among shown ticks,
-    // only show it once unless year is needed for distinction.
-    if (seenDates.has(basicLabel)) {
-      return ""
-    }
-
-    seenDates.add(basicLabel)
-    return data.length > 12 ? fullLabel : basicLabel
+    return data.length > 10
+      ? formatDateLabel(row?.date, true)
+      : formatDateLabel(row?.date)
   })
 }
 
@@ -101,9 +86,9 @@ function buildYAxisTicks(minY, maxY) {
 }
 
 export default function SgLineChart({ data, slopes, styles }) {
-  const width = 360
-  const height = 240
-  const padding = { top: 20, right: 16, bottom: 32, left: 42 }
+  const width = 340
+  const height = 190
+  const padding = { top: 14, right: 12, bottom: 28, left: 34 }
 
   const availableSeries = useMemo(() => {
     return SG_SERIES.filter((s) => {
@@ -128,7 +113,7 @@ export default function SgLineChart({ data, slopes, styles }) {
 
   if (!data || data.length === 0) {
     return (
-      <div style={styles.sectionCard}>
+      <div style={styles.sectionCardCompact}>
         <h2 style={styles.sectionTitle}>Strokes Gained Over Time</h2>
         <p style={styles.mutedText}>No rounds found for this filter.</p>
       </div>
@@ -138,7 +123,6 @@ export default function SgLineChart({ data, slopes, styles }) {
   const visibleSeries = availableSeries.filter((s) => visibleKeys.has(s.key))
 
   const nonLockedAvailableCount = availableSeries.filter((s) => !s.locked).length
-  const nonLockedVisibleCount = visibleSeries.filter((s) => !s.locked).length
 
   const toggleSeries = (key, locked = false) => {
     if (locked) return
@@ -173,28 +157,8 @@ export default function SgLineChart({ data, slopes, styles }) {
 
   if (allValues.length === 0) {
     return (
-      <div style={styles.sectionCard}>
+      <div style={styles.sectionCardCompact}>
         <h2 style={styles.sectionTitle}>Strokes Gained Over Time</h2>
-
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-          <button
-            type="button"
-            style={styles.secondaryAction || styles.primaryButton}
-            onClick={showAll}
-          >
-            Show all
-          </button>
-
-          <button
-            type="button"
-            style={styles.secondaryAction || styles.primaryButton}
-            onClick={showOnlyTotal}
-            disabled={nonLockedVisibleCount === 0}
-          >
-            Only total
-          </button>
-        </div>
-
         <p style={styles.mutedText}>
           No strokes gained data available for the visible categories.
         </p>
@@ -221,17 +185,16 @@ export default function SgLineChart({ data, slopes, styles }) {
   const yForValue = (v) => padding.top + ((maxY - v) / yRange) * plotHeight
 
   const ticks = buildYAxisTicks(minY, maxY)
-  const zeroY = yForValue(0)
   const xAxisLabels = buildXAxisLabels(data)
 
   return (
-    <div style={styles.sectionCard}>
+    <div style={styles.sectionCardCompact}>
       <h2 style={styles.sectionTitle}>Strokes Gained Over Time</h2>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+      <div style={styles.compactControlRow}>
         <button
           type="button"
-          style={styles.secondaryAction || styles.primaryButton}
+          style={styles.secondaryButtonCompact}
           onClick={showAll}
         >
           Show all
@@ -239,7 +202,7 @@ export default function SgLineChart({ data, slopes, styles }) {
 
         <button
           type="button"
-          style={styles.secondaryAction || styles.primaryButton}
+          style={styles.secondaryButtonCompact}
           onClick={showOnlyTotal}
           disabled={nonLockedAvailableCount === 0}
         >
@@ -247,7 +210,7 @@ export default function SgLineChart({ data, slopes, styles }) {
         </button>
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+      <div style={styles.compactChipWrap}>
         {availableSeries.map((s) => {
           const active = visibleKeys.has(s.key)
 
@@ -263,8 +226,8 @@ export default function SgLineChart({ data, slopes, styles }) {
                 background: active ? s.color : "#fff",
                 color: active ? "#fff" : s.color,
                 borderRadius: 999,
-                padding: "6px 10px",
-                fontSize: 11,
+                padding: "5px 8px",
+                fontSize: 10,
                 fontWeight: 600,
                 cursor: s.locked ? "default" : "pointer",
                 opacity: s.locked ? 0.95 : 1,
@@ -292,13 +255,13 @@ export default function SgLineChart({ data, slopes, styles }) {
                 x2={width - padding.right}
                 y2={y}
                 stroke={isZero ? "#ff3b30" : "#e5e7eb"}
-                strokeWidth={isZero ? "1.8" : "1"}
+                strokeWidth={isZero ? "1.6" : "1"}
                 strokeDasharray={isZero ? "6 6" : undefined}
               />
               <text
-                x={8}
+                x={6}
                 y={y + 4}
-                fontSize="11"
+                fontSize="10"
                 fill={isZero ? "#ff3b30" : "#6b7280"}
                 fontWeight={isZero ? 700 : 400}
               >
@@ -323,16 +286,6 @@ export default function SgLineChart({ data, slopes, styles }) {
           stroke="#9ca3af"
         />
 
-        <line
-          x1={padding.left}
-          y1={zeroY}
-          x2={width - padding.right}
-          y2={zeroY}
-          stroke="#ff3b30"
-          strokeWidth="2"
-          strokeDasharray="6 6"
-        />
-
         {visibleSeries.map((s) => {
           const segments = buildPolylineSegments(data, s.key, xForIndex, yForValue)
 
@@ -345,43 +298,31 @@ export default function SgLineChart({ data, slopes, styles }) {
                   key={`${s.key}-segment-${segmentIndex}`}
                   fill="none"
                   stroke={s.color}
-                  strokeWidth={s.key === "total" ? "2.8" : "2.2"}
+                  strokeWidth={s.key === "total" ? "2.6" : "2"}
                   points={segment.join(" ")}
                 />
               ))}
-              {data.map((row, i) => {
-                const label = xAxisLabels[i]
-                if (!label) return null
-
-                return (
-                  <text
-                    key={row.round_id || `${row.date}-${i}`}
-                    x={xForIndex(i)}
-                    y={height - 8}
-                    textAnchor="middle"
-                    fontSize="10"
-                    fill="#6b7280"
-                  >
-                    {label}
-                  </text>
-                )
-              })}
             </g>
           )
         })}
 
-        {data.map((row, i) => (
-          <text
-            key={row.round_id || `${row.date}-${i}`}
-            x={xForIndex(i)}
-            y={height - 8}
-            textAnchor="middle"
-            fontSize="10"
-            fill="#6b7280"
-          >
-            {formatDateLabel(row.date)}
-          </text>
-        ))}
+        {data.map((row, i) => {
+          const label = xAxisLabels[i]
+          if (!label) return null
+
+          return (
+            <text
+              key={row.round_id || `${row.date}-${i}`}
+              x={xForIndex(i)}
+              y={height - 8}
+              textAnchor="middle"
+              fontSize="9"
+              fill="#6b7280"
+            >
+              {label}
+            </text>
+          )
+        })}
       </svg>
     </div>
   )

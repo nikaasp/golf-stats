@@ -19,7 +19,6 @@ import {
   MISS_PATTERN_ORDER,
   MISS_PATTERN_COLORS,
 } from "../utils/missPatternConfig"
-
 import { SG_CATEGORY_LABELS } from "../utils/sgConfig"
 
 export default function AnalyticsScreen({
@@ -28,6 +27,9 @@ export default function AnalyticsScreen({
   goHome,
 }) {
   const today = new Date().toISOString().slice(0, 10)
+
+  const [page, setPage] = useState(0)
+  const pages = ["Filters", "SG", "Accuracy", "Misses"]
 
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState(today)
@@ -121,76 +123,122 @@ export default function AnalyticsScreen({
   }, [shots])
 
   return (
-    <div style={styles.page}>
-      <div style={styles.mobileShell}>
-        <div style={styles.sectionCard}>
-          <h1 style={styles.heroTitle}>Analytics</h1>
+    <div style={styles.fixedScreen}>
+      <div style={styles.fixedTopSection}>
+        <div style={styles.sectionCardCompact}>
+          <h1 style={styles.pageTitle}>Analytics</h1>
           <p style={styles.mutedText}>
-            Filter your rounds and view strokes gained, accuracy, putts, and miss patterns over time.
+            Filter your rounds and view trends across sessions.
           </p>
 
-          <label style={styles.label}>Start date</label>
-          <input
-            style={styles.input}
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-          />
-
-          <label style={styles.label}>End date</label>
-          <input
-            style={styles.input}
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-          />
-
-          <label style={styles.label}>Course</label>
-          <select
-            style={styles.input}
-            value={courseId}
-            onChange={(e) => setCourseId(e.target.value)}
-          >
-            <option value="all">All courses</option>
-            {courses.map((course) => (
-              <option key={course.id} value={course.id}>
-                {course.name}
-              </option>
+          <div style={styles.screenStepPills}>
+            {pages.map((label, index) => (
+              <div
+                key={label}
+                style={{
+                  ...styles.screenStepPill,
+                  ...(page === index ? styles.screenStepPillActive : {}),
+                }}
+              >
+                {label}
+              </div>
             ))}
-          </select>
-
-          <button style={styles.primaryButton} onClick={loadAnalytics} disabled={loading}>
-            {loading ? "Loading..." : "Apply Filter"}
-          </button>
+          </div>
         </div>
+      </div>
 
-        <SgLineChart data={timeline} slopes={slopes} styles={styles} />
-        <PercentLineChart data={accuracyTimeline} styles={styles} />
-        <PuttsLineChart data={puttsTimeline} styles={styles} />
+      <div style={styles.fixedMainSection}>
+        {page === 0 && (
+          <div style={styles.sectionCardCompact}>
+            <label style={styles.label}>Start date</label>
+            <input
+              style={styles.input}
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
 
-        {missPatternCharts.length > 0 && (
-          <div style={styles.sectionCard}>
-            <h2 style={styles.sectionTitle}>Miss Patterns by Category</h2>
+            <label style={styles.label}>End date</label>
+            <input
+              style={styles.input}
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: "12px",
-              }}
+            <label style={styles.label}>Course</label>
+            <select
+              style={styles.input}
+              value={courseId}
+              onChange={(e) => setCourseId(e.target.value)}
             >
-              {missPatternCharts.map((chart) => (
-                <div key={chart.key} style={{ minWidth: 0 }}>
-                  <PieChart title={chart.title} data={chart.data} styles={styles} />
-                </div>
+              <option value="all">All courses</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {course.name}
+                </option>
               ))}
-            </div>
+            </select>
+
+            <button style={styles.primaryButton} onClick={loadAnalytics} disabled={loading}>
+              {loading ? "Loading..." : "Apply Filter"}
+            </button>
           </div>
         )}
 
-        <button style={styles.primaryButton} onClick={goHome}>
-          Back to Home
-        </button>
+        {page === 1 && <SgLineChart data={timeline} slopes={slopes} styles={styles} />}
+
+        {page === 2 && (
+          <div style={styles.fixedChartGrid}>
+            <PercentLineChart data={accuracyTimeline} styles={styles} />
+            <PuttsLineChart data={puttsTimeline} styles={styles} />
+          </div>
+        )}
+
+        {page === 3 && (
+          <div style={styles.sectionCardCompact}>
+            <h2 style={styles.sectionTitle}>Miss Patterns by Category</h2>
+
+            {missPatternCharts.length === 0 ? (
+              <p style={styles.mutedText}>No miss pattern data available.</p>
+            ) : (
+              <div style={styles.fixedChartGrid}>
+                {missPatternCharts.slice(0, 2).map((chart) => (
+                  <PieChart key={chart.key} title={chart.title} data={chart.data} styles={styles} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div style={styles.fixedBottomSection}>
+        <div style={styles.bottomNavRowThree}>
+          <button
+            style={styles.secondaryButton}
+            onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+            disabled={page === 0}
+          >
+            Back
+          </button>
+
+          <button style={styles.secondaryButton} onClick={goHome}>
+            Home
+          </button>
+
+          <button
+            style={styles.primaryButton}
+            onClick={() => {
+              if (page < pages.length - 1) {
+                setPage((prev) => prev + 1)
+              } else {
+                goHome()
+              }
+            }}
+          >
+            {page < pages.length - 1 ? "Next" : "Done"}
+          </button>
+        </div>
       </div>
     </div>
   )

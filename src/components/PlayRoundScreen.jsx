@@ -33,82 +33,90 @@ export default function PlayRoundScreen({
   }
 
   return (
-    <div style={styles.screenContainer}>
-      <h1 style={styles.pageTitle}>Play Round</h1>
+    <div style={styles.fixedScreen}>
+      <div style={styles.fixedTopSection}>
+        <div style={styles.sectionCardCompact}>
+          <h1 style={styles.pageTitle}>Play Round</h1>
 
-      <label style={styles.label}>Existing course</label>
-      <select
-        value={selectedCourseId || ""}
-        onChange={(e) => setSelectedCourseId(e.target.value)}
-        style={styles.selectInput}
-      >
-        <option value="">Select course</option>
-        {courses.map((course) => (
-          <option key={course.id} value={course.id}>
-            {course.name}
-          </option>
-        ))}
-      </select>
-
-      <div style={{ height: 16 }} />
-
-      <label style={styles.label}>New course</label>
-      <div style={styles.inlineRow}>
-        <input
-          type="text"
-          value={newCourseName}
-          onChange={(e) => setNewCourseName(e.target.value)}
-          placeholder="Type course name"
-          style={styles.textInput}
-        />
-        <button type="button" style={styles.secondaryButton} onClick={handleCreateCourse}>
-          Save
-        </button>
-      </div>
-
-      <div style={{ height: 16 }} />
-
-      <label style={styles.label}>Round tags</label>
-      <div style={styles.inlineRow}>
-        <input
-          type="text"
-          value={tagInput}
-          onChange={(e) => setTagInput(e.target.value)}
-          placeholder="rainy, played with Matt..."
-          style={styles.textInput}
-        />
-        <button type="button" style={styles.secondaryButton} onClick={addTag}>
-          Add
-        </button>
-      </div>
-
-      <div style={styles.tagRow}>
-        {roundTags.map((tag) => (
-          <button
-            key={tag}
-            type="button"
-            style={styles.tagChip}
-            onClick={() => removeTag(tag)}
+          <label style={styles.label}>Existing course</label>
+          <select
+            value={selectedCourseId || ""}
+            onChange={(e) => setSelectedCourseId(e.target.value)}
+            style={styles.selectInput}
           >
-            {tag} ×
-          </button>
-        ))}
+            <option value="">Select course</option>
+            {courses.map((course) => (
+              <option key={course.id} value={course.id}>
+                {course.name}
+              </option>
+            ))}
+          </select>
+
+          <label style={styles.label}>New course</label>
+          <div style={styles.inlineRow}>
+            <input
+              type="text"
+              value={newCourseName}
+              onChange={(e) => setNewCourseName(e.target.value)}
+              placeholder="Type course name"
+              style={styles.textInput}
+            />
+            <button
+              type="button"
+              style={styles.secondaryButtonCompact}
+              onClick={handleCreateCourse}
+            >
+              Save
+            </button>
+          </div>
+
+          <label style={styles.label}>Round tags</label>
+          <div style={styles.inlineRow}>
+            <input
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="rainy, played with Matt..."
+              style={styles.textInput}
+            />
+            <button
+              type="button"
+              style={styles.secondaryButtonCompact}
+              onClick={addTag}
+            >
+              Add
+            </button>
+          </div>
+
+          <div style={styles.tagRowCompact}>
+            {roundTags.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                style={styles.tagChip}
+                onClick={() => removeTag(tag)}
+              >
+                {tag} ×
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div style={{ height: 20 }} />
+      <div style={styles.fixedBottomSection}>
+        <div style={styles.bottomNavRow}>
+          <button type="button" style={styles.secondaryButton} onClick={goHome}>
+            Back
+          </button>
 
-      <div style={styles.inlineRow}>
-        <button type="button" style={styles.secondaryButton} onClick={goHome}>
-          Back
-        </button>
-
-        <button
-          type="button"
-          style={styles.primaryButton}
-          onClick={() => startRound({ roundTags })}
-        >
-          Play Round
-        </button>
+          <button
+            type="button"
+            style={styles.primaryButton}
+            onClick={() => startRound({ roundTags })}
+          >
+            Play Round
+          </button>
+        </div>
       </div>
     </div>
   )
