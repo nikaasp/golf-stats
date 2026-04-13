@@ -79,7 +79,7 @@ export default function SummaryScreen({
         <div style={styles.sectionCardCompact}>
           <h1 style={styles.pageTitle}>Round Summary</h1>
           <p style={styles.mutedText}>
-            {course} • {date}
+            {course} · {date}
           </p>
           <div style={styles.screenStepPills}>
             {pages.map((label, index) => (
@@ -118,16 +118,46 @@ export default function SummaryScreen({
           <div style={styles.sectionCardCompact}>
             <h2 style={styles.sectionTitle}>Strokes Gained</h2>
 
-            <div style={styles.summaryInline}><span>Off the tee</span><strong>{formatStrokesGained(sgSummary?.tee)}</strong></div>
-            <div style={styles.summaryInline}><span>Approach (FW)</span><strong>{formatStrokesGained(sgSummary?.approachFairway)}</strong></div>
-            <div style={styles.summaryInline}><span>Approach (RGH)</span><strong>{formatStrokesGained(sgSummary?.approachRough)}</strong></div>
-            <div style={styles.summaryInline}><span>Approach (SND)</span><strong>{formatStrokesGained(sgSummary?.approachSand)}</strong></div>
-            <div style={styles.summaryInline}><span>Short game (FW)</span><strong>{formatStrokesGained(sgSummary?.shortGameFairway)}</strong></div>
-            <div style={styles.summaryInline}><span>Short game (RGH)</span><strong>{formatStrokesGained(sgSummary?.shortGameRough)}</strong></div>
-            <div style={styles.summaryInline}><span>Short game (SND)</span><strong>{formatStrokesGained(sgSummary?.shortGameSand)}</strong></div>
-            <div style={styles.summaryInline}><span>Recovery</span><strong>{formatStrokesGained(sgSummary?.recovery)}</strong></div>
-            <div style={styles.summaryInline}><span>On the green</span><strong>{formatStrokesGained(sgSummary?.green)}</strong></div>
-            <div style={styles.summaryInline}><span>Total</span><strong>{formatStrokesGained(sgSummary?.total)}</strong></div>
+            <div style={styles.summaryInline}>
+              <span>Off the tee</span>
+              <strong>{formatStrokesGained(sgSummary?.tee)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>Approach (FW)</span>
+              <strong>{formatStrokesGained(sgSummary?.approachFairway)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>Approach (RGH)</span>
+              <strong>{formatStrokesGained(sgSummary?.approachRough)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>Approach (SND)</span>
+              <strong>{formatStrokesGained(sgSummary?.approachSand)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>Short game (FW)</span>
+              <strong>{formatStrokesGained(sgSummary?.shortGameFairway)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>Short game (RGH)</span>
+              <strong>{formatStrokesGained(sgSummary?.shortGameRough)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>Short game (SND)</span>
+              <strong>{formatStrokesGained(sgSummary?.shortGameSand)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>Recovery</span>
+              <strong>{formatStrokesGained(sgSummary?.recovery)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>On the green</span>
+              <strong>{formatStrokesGained(sgSummary?.green)}</strong>
+            </div>
+            <div style={styles.summaryInline}>
+              <span>Total</span>
+              <strong>{formatStrokesGained(sgSummary?.total)}</strong>
+            </div>
           </div>
         )}
 

@@ -49,7 +49,7 @@ export default function DistancePicker({ value, onChange, styles }) {
           style={styles.keypadButtonMiniSecondary}
           onClick={handleBack}
         >
-          ⌫
+          Del
         </button>
       </div>
     </div>

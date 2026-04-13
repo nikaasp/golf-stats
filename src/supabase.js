@@ -1,7 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js"
 
-// Replace these with your Supabase project values:
-const supabaseUrl = "https://xnnepnzgpuqevzvrsilx.supabase.co"
-const supabaseKey = "sb_publishable_zz7S4F0Bbe85XBxpjmKAeg_9YN1z5ZB"
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    "Missing Supabase environment variables. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+  )
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey)

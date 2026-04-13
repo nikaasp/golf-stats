@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState } from "react"
 import { SG_SERIES } from "../utils/sgConfig"
 
 function formatDateLabel(dateStr, includeYear = false) {
@@ -97,19 +97,7 @@ export default function SgLineChart({ data, slopes, styles }) {
     })
   }, [data])
 
-  const [visibleKeys, setVisibleKeys] = useState(() => new Set(["total"]))
-
-  useEffect(() => {
-    setVisibleKeys((prev) => {
-      const next = new Set(["total"])
-      availableSeries.forEach((s) => {
-        if (prev.has(s.key) || s.key === "total") {
-          next.add(s.key)
-        }
-      })
-      return next
-    })
-  }, [availableSeries])
+  const [selectedKeys, setSelectedKeys] = useState(["total"])
 
   if (!data || data.length === 0) {
     return (
@@ -120,14 +108,20 @@ export default function SgLineChart({ data, slopes, styles }) {
     )
   }
 
-  const visibleSeries = availableSeries.filter((s) => visibleKeys.has(s.key))
+  const visibleKeySet = new Set(
+    availableSeries
+      .map((series) => series.key)
+      .filter((key) => key === "total" || selectedKeys.includes(key))
+  )
+
+  const visibleSeries = availableSeries.filter((s) => visibleKeySet.has(s.key))
 
   const nonLockedAvailableCount = availableSeries.filter((s) => !s.locked).length
 
   const toggleSeries = (key, locked = false) => {
     if (locked) return
 
-    setVisibleKeys((prev) => {
+    setSelectedKeys((prev) => {
       const next = new Set(prev)
 
       if (next.has(key)) {
@@ -137,16 +131,16 @@ export default function SgLineChart({ data, slopes, styles }) {
       }
 
       next.add("total")
-      return next
+      return Array.from(next)
     })
   }
 
   const showAll = () => {
-    setVisibleKeys(new Set(availableSeries.map((s) => s.key)))
+    setSelectedKeys(availableSeries.map((s) => s.key))
   }
 
   const showOnlyTotal = () => {
-    setVisibleKeys(new Set(["total"]))
+    setSelectedKeys(["total"])
   }
 
   const allValues = data.flatMap((row) =>
@@ -212,7 +206,7 @@ export default function SgLineChart({ data, slopes, styles }) {
 
       <div style={styles.compactChipWrap}>
         {availableSeries.map((s) => {
-          const active = visibleKeys.has(s.key)
+          const active = visibleKeySet.has(s.key)
 
           return (
             <button

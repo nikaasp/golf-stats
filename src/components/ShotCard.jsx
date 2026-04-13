@@ -11,20 +11,20 @@ const LIE_OPTIONS = [
 ]
 
 const MISS_BUTTONS = [
-  { value: "long_left", label: "↖", area: "topLeft" },
-  { value: "long", label: "↑", area: "topCenter" },
-  { value: "long_right", label: "↗", area: "topRight" },
-  { value: "left", label: "←", area: "midLeft" },
-  { value: "right", label: "→", area: "midRight" },
-  { value: "short_left", label: "↙", area: "bottomLeft" },
-  { value: "short", label: "↓", area: "bottomCenter" },
-  { value: "short_right", label: "↘", area: "bottomRight" },
+  { value: "long_left", label: "NW", area: "topLeft" },
+  { value: "long", label: "N", area: "topCenter" },
+  { value: "long_right", label: "NE", area: "topRight" },
+  { value: "left", label: "L", area: "midLeft" },
+  { value: "right", label: "R", area: "midRight" },
+  { value: "short_left", label: "SW", area: "bottomLeft" },
+  { value: "short", label: "S", area: "bottomCenter" },
+  { value: "short_right", label: "SE", area: "bottomRight" },
 ]
 
 const STRIKE_OPTIONS = [
-  { value: "poor", label: "😕" },
-  { value: "ok", label: "🙂" },
-  { value: "pure", label: "😄" },
+  { value: "poor", label: "Poor" },
+  { value: "ok", label: "OK" },
+  { value: "pure", label: "Pure" },
 ]
 
 function hasEmptyDistance(value) {

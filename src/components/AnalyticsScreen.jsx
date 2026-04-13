@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import SgLineChart from "./SgLineChart"
 import PercentLineChart from "./PercentLineChart"
 import PuttsLineChart from "./PuttsLineChart"
@@ -40,11 +40,7 @@ export default function AnalyticsScreen({
   const [shots, setShots] = useState([])
   const [holes, setHoles] = useState([])
 
-  useEffect(() => {
-    loadAnalytics()
-  }, [])
-
-  async function loadAnalytics() {
+  const loadAnalytics = useCallback(async () => {
     setLoading(true)
 
     const roundsRes = await fetchRoundsForAnalytics({
@@ -83,7 +79,15 @@ export default function AnalyticsScreen({
 
     setShots(shotsRes.data || [])
     setHoles(holesRes.data || [])
-  }
+  }, [courseId, endDate, startDate])
+
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      void loadAnalytics()
+    }, 0)
+
+    return () => clearTimeout(timerId)
+  }, [loadAnalytics])
 
   const { timeline, slopes } = useMemo(
     () => buildSgTimeline(rounds, shots),

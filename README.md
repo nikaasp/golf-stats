@@ -1,16 +1,46 @@
-# React + Vite
+# Golf Stats
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Golf Stats is a React + Vite app for logging rounds hole by hole, saving shot-by-shot data, and reviewing trends like strokes gained, fairways, GIR, putts, and miss patterns.
 
-Currently, two official plugins are available:
+## What the app does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Start a round on a saved course or create a new course.
+- Log each hole shot by shot with lie, distance, miss pattern, strike quality, and penalties.
+- Save course par and hole-length data as you play.
+- Review completed rounds with scorecards, strokes gained, and miss-pattern charts.
+- Explore round-to-round analytics for SG, fairway/GIR percentage, and putts.
 
-## React Compiler
+## Setup
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. Install dependencies:
 
-## Expanding the ESLint configuration
+```bash
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+2. Copy `.env.example` to `.env` and fill in your Supabase values:
+
+```env
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+```
+
+3. Start the app:
+
+```bash
+npm run dev
+```
+
+## Scripts
+
+- `npm run dev` starts the Vite dev server.
+- `npm run build` creates a production build.
+- `npm run lint` runs ESLint.
+- `npm run test` runs the utility test suite with Node's built-in test runner.
+- `npm run preview` previews the production build locally.
+
+## Project notes
+
+- The live round flow is currently centered on shot-by-shot entry.
+- Supabase config is loaded from Vite environment variables.
+- The tests focus on the golf logic in `src/utils`, which is where the most important derived stats live.

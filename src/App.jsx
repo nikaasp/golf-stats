@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { supabase } from "./supabase"
 
@@ -78,6 +78,13 @@ function mergeHoleData(existing = [], incomingHole) {
   ].sort((a, b) => a.hole - b.hole)
 }
 
+function getSavedCoursePar(courseData, holeNumber) {
+  if (!courseData?.hole_pars?.length) return ""
+
+  const holeData = courseData.hole_pars.find((h) => Number(h.hole) === Number(holeNumber))
+  return holeData?.par != null ? String(holeData.par) : ""
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(true)
@@ -99,22 +106,32 @@ function App() {
   const [selectedReviewShots, setSelectedReviewShots] = useState([])
 
   const [par, setPar] = useState("")
-  const [entryMode, setEntryMode] = useState("")
-
-  const [score, setScore] = useState("")
-  const [putts, setPutts] = useState("")
-  const [fairway, setFairway] = useState(false)
-  const [gir, setGir] = useState(false)
-  const [penalty, setPenalty] = useState(0)
 
   const [shots, setShots] = useState([makeShot(1)])
   const [activeShotIndex, setActiveShotIndex] = useState(0)
 
   const [courses, setCourses] = useState([])
   const [selectedCourseId, setSelectedCourseId] = useState("")
-  const [selectedCourseData, setSelectedCourseData] = useState(null)
   const [isNewCourse, setIsNewCourse] = useState(true)
   const [newCoursePars, setNewCoursePars] = useState([])
+
+  const loadRounds = useCallback(async () => {
+    const { data, error } = await fetchRounds()
+    if (error) {
+      alert("Could not load rounds: " + error.message)
+      return
+    }
+    setReviewRounds(data || [])
+  }, [])
+
+  const loadCourses = useCallback(async () => {
+    const { data, error } = await fetchCourses()
+    if (error) {
+      alert("Could not load courses: " + error.message)
+      return
+    }
+    setCourses(data || [])
+  }, [])
 
 
   useEffect(() => {
@@ -133,6 +150,10 @@ function App() {
       if (mounted) {
         setSession(session ?? null)
         setAuthLoading(false)
+        if (session) {
+          void loadRounds()
+          void loadCourses()
+        }
       }
     }
 
@@ -143,61 +164,17 @@ function App() {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session ?? null)
       setAuthLoading(false)
+      if (session) {
+        void loadRounds()
+        void loadCourses()
+      }
     })
 
     return () => {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [])
-
-  useEffect(() => {
-    if (session && screen === "home") {
-      loadRounds()
-      loadCourses()
-    }
-  }, [screen, session])
-
-  useEffect(() => {
-    if (!selectedCourseId || selectedCourseId === "new") {
-      setSelectedCourseData(null)
-      return
-    }
-
-    const selected = courses.find((c) => c.id === selectedCourseId) || null
-    setSelectedCourseData(selected)
-  }, [selectedCourseId, courses])
-
-  useEffect(() => {
-    if (screen !== "inRound") return
-    if (isNewCourse) return
-    if (!selectedCourseData?.hole_pars?.length) return
-
-    const holeData = selectedCourseData.hole_pars.find((h) => Number(h.hole) === Number(hole))
-    if (holeData) {
-      setPar(holeData.par != null ? String(holeData.par) : "")
-    } else {
-      setPar("")
-    }
-  }, [hole, screen, isNewCourse, selectedCourseData])
-
-  async function loadRounds() {
-    const { data, error } = await fetchRounds()
-    if (error) {
-      alert("Could not load rounds: " + error.message)
-      return
-    }
-    setReviewRounds(data || [])
-  }
-
-  async function loadCourses() {
-    const { data, error } = await fetchCourses()
-    if (error) {
-      alert("Could not load courses: " + error.message)
-      return
-    }
-    setCourses(data || [])
-  }
+  }, [loadCourses, loadRounds])
 
   async function loadRoundDetailsForReview(round) {
     setLoading(true)
@@ -223,10 +200,7 @@ function App() {
     const parValue = par === "" ? null : parseInt(par, 10)
     if (parValue === null || Number.isNaN(parValue)) return baseData
 
-    let holeLength = null
-    if (entryMode === "shot_by_shot") {
-      holeLength = getHoleLengthFromShots(getValidShots(shots))
-    }
+    const holeLength = getHoleLengthFromShots(getValidShots(shots))
 
     return mergeHoleData(baseData, {
       hole,
@@ -252,7 +226,6 @@ function App() {
 
     if (existing) {
       setSelectedCourseId(existing.id)
-      setSelectedCourseData(existing)
       setIsNewCourse(false)
       setCourse(existing.name)
       return
@@ -280,8 +253,7 @@ function App() {
     }
   }
 
-  async function handleStartRound(roundTags = []) {
-    console.log("Round tags:", roundTags)
+  async function handleStartRound() {
     if (isNewCourse) {
       if (!course.trim()) {
         alert("Please enter a course name")
@@ -328,24 +300,13 @@ function App() {
     setRoundShots([])
 
     if (!isNewCourse && selectedCourseData?.hole_pars?.length) {
-      const hole1 = selectedCourseData.hole_pars.find((h) => Number(h.hole) === 1)
-      setPar(hole1?.par != null ? String(hole1.par) : "")
+      setPar(getSavedCoursePar(selectedCourseData, 1))
     } else {
       setPar("")
     }
 
-    setEntryMode("")
-    resetScoreInputs()
     resetShotInputs()
     setScreen("inRound")
-  }
-
-  function resetScoreInputs() {
-    setScore("")
-    setPutts("")
-    setFairway(false)
-    setGir(false)
-    setPenalty(0)
   }
 
   function resetShotInputs() {
@@ -355,8 +316,6 @@ function App() {
 
   function resetHoleInputs() {
     setPar("")
-    setEntryMode("")
-    resetScoreInputs()
     resetShotInputs()
   }
 
@@ -484,55 +443,6 @@ function App() {
     setScreen("summary")
   }
 
-  async function saveScoreHole() {
-    if (!roundId) {
-      alert("Please start a round first")
-      return false
-    }
-
-    if (par === "") {
-      alert("Please choose par")
-      return false
-    }
-
-    const parValue = parseInt(par, 10)
-    const scoreValue = score === "" ? parValue : parseInt(score, 10)
-    const puttsValue = putts === "" ? 2 : parseInt(putts, 10)
-    const penaltyValue = penalty === "" ? 0 : parseInt(penalty, 10)
-
-    setNewCoursePars((prev) =>
-      mergeHoleData(prev, {
-        hole,
-        par: parValue,
-      })
-    )
-
-    setLoading(true)
-
-    const { error } = await insertHole({
-      user_id: session.user.id,
-      round_id: roundId,
-      hole_number: hole,
-      par: parValue,
-      entry_mode: "score",
-      score: scoreValue,
-      putts: puttsValue,
-      fairway,
-      gir,
-      penalty: penaltyValue,
-      skipped: false,
-    })
-
-    setLoading(false)
-
-    if (error) {
-      alert("Error saving hole: " + error.message)
-      return false
-    }
-
-    return true
-  }
-
   async function saveShotByShotHole() {
     if (!roundId) {
       alert("Please start a round first")
@@ -620,20 +530,7 @@ function App() {
   }
 
   async function saveHole() {
-    if (!entryMode) {
-      alert('Please choose either "Shot by shot" or "Score"')
-      return
-    }
-
-    let ok = false
-
-    if (entryMode === "score") {
-      ok = await saveScoreHole()
-    }
-
-    if (entryMode === "shot_by_shot") {
-      ok = await saveShotByShotHole()
-    }
+    const ok = await saveShotByShotHole()
 
     if (!ok) return
 
@@ -647,7 +544,8 @@ function App() {
 
     setNewCoursePars(finalPars)
     setHole(hole + 1)
-    resetHoleInputs()
+    setPar(isNewCourse ? "" : getSavedCoursePar(selectedCourseData, hole + 1))
+    resetShotInputs()
   }
 
   async function skipHole() {
@@ -689,19 +587,12 @@ function App() {
     }
 
     setHole(hole + 1)
-    resetHoleInputs()
+    setPar(isNewCourse ? "" : getSavedCoursePar(selectedCourseData, hole + 1))
+    resetShotInputs()
   }
 
   function currentHoleHasData() {
-    if (entryMode === "score") {
-      return par !== "" || score !== "" || putts !== "" || penalty !== 0 || fairway || gir
-    }
-
-    if (entryMode === "shot_by_shot") {
-      return par !== "" || getValidShots(shots).length > 0
-    }
-
-    return false
+    return par !== "" || getValidShots(shots).length > 0
   }
 
   async function endRoundNow() {
@@ -719,14 +610,7 @@ function App() {
     const confirmed = window.confirm("Save current hole if possible and end the round now?")
     if (!confirmed) return
 
-    if (!entryMode) {
-      alert('Choose "Shot by shot" or "Score", or clear the hole and end without saving.')
-      return
-    }
-
-    let ok = false
-    if (entryMode === "score") ok = await saveScoreHole()
-    if (entryMode === "shot_by_shot") ok = await saveShotByShotHole()
+    const ok = await saveShotByShotHole()
 
     if (!ok) return
 
@@ -760,17 +644,6 @@ function App() {
     await loadCourses()
   }
 
-  async function signOut() {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      alert("Could not sign out: " + error.message)
-      return
-    }
-
-    setSession(null)
-    goHomeAndReset()
-  }
-
   function goHomeAndReset() {
     setScreen("home")
     setRoundId(null)
@@ -784,7 +657,6 @@ function App() {
     setSelectedReviewHoles([])
     setSelectedReviewShots([])
     setSelectedCourseId("")
-    setSelectedCourseData(null)
     setIsNewCourse(true)
     setNewCoursePars([])
     resetHoleInputs()
@@ -811,6 +683,11 @@ function App() {
     () => summarizeRoundStrokesGained(selectedReviewShots),
     [selectedReviewShots]
   )
+
+  const selectedCourseData =
+    selectedCourseId
+      ? courses.find((courseItem) => courseItem.id === selectedCourseId) || null
+      : null
 
   const currentCourseHoleData = useMemo(() => {
     if (!selectedCourseData?.hole_pars?.length) return null
@@ -866,16 +743,14 @@ function App() {
             setIsNewCourse(!value)
             if (value) {
               const selected = courses.find((c) => c.id === value) || null
-              setSelectedCourseData(selected)
               setCourse(selected?.name || "")
             } else {
-              setSelectedCourseData(null)
               setCourse("")
             }
           }}
           createCourse={handleCreateCourse}
           goHome={() => setScreen("home")}
-          startRound={({ roundTags }) => handleStartRound(roundTags)}
+          startRound={handleStartRound}
         />
       </div>
     )
@@ -898,20 +773,11 @@ function App() {
           removeShotCard={removeShotCard}
           addShotCard={addShotCard}
           shotTotals={shotTotals}
-          goHomeAndReset={goHomeAndReset}
+          loading={loading}
+          onSaveHole={saveHole}
+          onSkipHole={skipHole}
+          onEndRound={endRoundNow}
           holeLength={currentHoleLength}   // 👈 ADD THIS LINE
-          goToPrevHole={() => {
-            if (hole > 1) {
-              setHole((prev) => prev - 1)
-              resetShotInputs()
-            }
-          }}
-          goToNextHole={() => {
-            if (hole < 18) {
-              setHole((prev) => prev + 1)
-              resetShotInputs()
-            }
-          }}
         />
       </div>
     )

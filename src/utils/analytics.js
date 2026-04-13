@@ -1,4 +1,4 @@
-import { clamp } from "./golfFormatters"
+import { clamp } from "./golfFormatters.js"
 
 export function getDefaultLieForShot(shotNumber) {
   return shotNumber === 1 ? "Tee" : "Fairway"
@@ -207,6 +207,7 @@ function createEmptyMissPatternCounts() {
     long: 0,
     long_right: 0,
     left: 0,
+    spot_on: 0,
     right: 0,
     short_left: 0,
     short: 0,

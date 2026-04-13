@@ -10,15 +10,18 @@ export default function PieChart({ title, data = [], styles }) {
     )
   }
 
-  let current = 0
-  const gradientStops = data
-    .map((d) => {
-      const start = current
-      const end = current + (d.value / total) * 100
-      current = end
-      return `${d.color} ${start}% ${end}%`
-    })
-    .join(", ")
+  const gradientSegments = data.reduce(
+    (acc, item) => {
+      const start = acc.current
+      const end = start + (item.value / total) * 100
+      acc.current = end
+      acc.stops.push(`${item.color} ${start}% ${end}%`)
+      return acc
+    },
+    { current: 0, stops: [] }
+  )
+
+  const gradientStops = gradientSegments.stops.join(", ")
 
   return (
     <div style={styles.chartCardCompact}>

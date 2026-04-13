@@ -1,4 +1,4 @@
-import { SG_TABLE } from "./strokesGainedTable"
+import { SG_TABLE } from "./strokesGainedTable.js"
 
 function normalizeLie(lie) {
   const value = String(lie || "").trim()

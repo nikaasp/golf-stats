@@ -15,9 +15,11 @@ export default function InRoundScreen({
   updateShot,
   removeShotCard,
   addShotCard,
-  goHomeAndReset,
-  goToNextHole,
-  goToPrevHole,
+  shotTotals,
+  loading,
+  onSaveHole,
+  onSkipHole,
+  onEndRound,
   holeLength,
 }) {
   const activeShot = shots?.[activeShotIndex] || null
@@ -48,6 +50,7 @@ export default function InRoundScreen({
                 ...(String(par) === String(option) ? styles.parButtonCompactActive : {}),
               }}
               onClick={() => setPar(String(option))}
+              disabled={loading}
             >
               Par {option}
             </button>
@@ -78,12 +81,27 @@ export default function InRoundScreen({
       </div>
 
       <div style={styles.inRoundFooterCompact}>
+        <div style={styles.summaryBox}>
+          <div style={styles.summaryInline}>
+            <span>Shots logged</span>
+            <strong>{shotTotals?.shotCount ?? 0}</strong>
+          </div>
+          <div style={styles.summaryInline}>
+            <span>Penalty strokes</span>
+            <strong>{shotTotals?.autoPenalty ?? 0}</strong>
+          </div>
+          <div style={styles.summaryInline}>
+            <span>Hole score</span>
+            <strong>{shotTotals?.totalScore ?? 0}</strong>
+          </div>
+        </div>
+
         <div style={styles.inRoundShotNavRowCompact}>
           <button
             type="button"
             style={styles.lightBlueNavButton}
             onClick={() => setActiveShotIndex((prev) => Math.max(0, prev - 1))}
-            disabled={isFirstShot}
+            disabled={isFirstShot || loading}
           >
             Prev Shot
           </button>
@@ -98,22 +116,38 @@ export default function InRoundScreen({
                 setActiveShotIndex((prev) => prev + 1)
               }
             }}
+            disabled={loading}
           >
-            Add / Next Shot
+            {isLastShot ? "Add Shot" : "Next Shot"}
           </button>
         </div>
 
         <div style={styles.inRoundHoleNavRowCompact}>
-          <button type="button" style={styles.darkBlueNavButton} onClick={goToPrevHole}>
-            Prev Hole
+          <button
+            type="button"
+            style={styles.secondaryButtonCompact}
+            onClick={onSkipHole}
+            disabled={loading}
+          >
+            Skip Hole
           </button>
 
-          <button type="button" style={styles.darkBlueNavButton} onClick={goToNextHole}>
-            Next Hole
+          <button
+            type="button"
+            style={styles.darkBlueNavButton}
+            onClick={onSaveHole}
+            disabled={loading}
+          >
+            {hole >= 18 ? "Save Round" : "Save Hole"}
           </button>
         </div>
 
-        <button type="button" style={styles.endRoundButtonCompact} onClick={goHomeAndReset}>
+        <button
+          type="button"
+          style={styles.endRoundButtonCompact}
+          onClick={onEndRound}
+          disabled={loading}
+        >
           End Round
         </button>
       </div>

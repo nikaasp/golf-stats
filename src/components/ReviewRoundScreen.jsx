@@ -103,7 +103,7 @@ export default function ReviewRoundScreen({
         <div style={styles.sectionCardCompact}>
           <h1 style={styles.pageTitle}>Review Round</h1>
           <p style={styles.mutedText}>
-            {selectedReviewRound?.course} • {selectedReviewRound?.date}
+            {selectedReviewRound?.course} · {selectedReviewRound?.date}
           </p>
           <div style={styles.screenStepPills}>
             {pages.map((label, index) => (

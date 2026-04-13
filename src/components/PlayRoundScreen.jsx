@@ -10,20 +10,6 @@ export default function PlayRoundScreen({
   styles,
 }) {
   const [newCourseName, setNewCourseName] = useState("")
-  const [tagInput, setTagInput] = useState("")
-  const [roundTags, setRoundTags] = useState([])
-
-  const addTag = () => {
-    const cleaned = tagInput.trim()
-    if (!cleaned) return
-    if (roundTags.includes(cleaned)) return
-    setRoundTags((prev) => [...prev, cleaned])
-    setTagInput("")
-  }
-
-  const removeTag = (tagToRemove) => {
-    setRoundTags((prev) => prev.filter((tag) => tag !== tagToRemove))
-  }
 
   const handleCreateCourse = async () => {
     const cleaned = newCourseName.trim()
@@ -69,37 +55,6 @@ export default function PlayRoundScreen({
               Save
             </button>
           </div>
-
-          <label style={styles.label}>Round tags</label>
-          <div style={styles.inlineRow}>
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              placeholder="rainy, played with Matt..."
-              style={styles.textInput}
-            />
-            <button
-              type="button"
-              style={styles.secondaryButtonCompact}
-              onClick={addTag}
-            >
-              Add
-            </button>
-          </div>
-
-          <div style={styles.tagRowCompact}>
-            {roundTags.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                style={styles.tagChip}
-                onClick={() => removeTag(tag)}
-              >
-                {tag} ×
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -112,7 +67,7 @@ export default function PlayRoundScreen({
           <button
             type="button"
             style={styles.primaryButton}
-            onClick={() => startRound({ roundTags })}
+            onClick={startRound}
           >
             Play Round
           </button>
