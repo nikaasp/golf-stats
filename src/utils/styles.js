@@ -111,6 +111,8 @@ export const styles = {
     color: "#6b7280",
     marginTop: "8px",
     marginBottom: 0,
+    fontSize: "13px",
+    lineHeight: 1.35,
   },
 
   label: {
@@ -133,12 +135,12 @@ export const styles = {
   },
 
   primaryButton: {
-    marginTop: "16px",
+    marginTop: "12px",
     width: "100%",
-    minHeight: "48px",
+    minHeight: "42px",
     border: "none",
-    borderRadius: "16px",
-    fontSize: "16px",
+    borderRadius: "14px",
+    fontSize: "14px",
     fontWeight: 700,
     background: "#2563eb",
     color: "white",
@@ -147,21 +149,22 @@ export const styles = {
 
   secondaryButton: {
     width: "100%",
-    minHeight: "44px",
+    minHeight: "42px",
     borderRadius: "14px",
     border: "1px solid #d1d5db",
     background: "#ffffff",
     color: "#111827",
     fontWeight: 700,
+    fontSize: "14px",
     cursor: "pointer",
   },
 
   deleteRoundButtonLarge: {
     width: "100%",
-    minHeight: "50px",
+    minHeight: "42px",
     border: "none",
-    borderRadius: "16px",
-    fontSize: "16px",
+    borderRadius: "14px",
+    fontSize: "14px",
     fontWeight: 700,
     background: "#d45555",
     color: "white",
@@ -221,12 +224,13 @@ export const styles = {
   deleteRoundButton: {
     marginTop: "10px",
     width: "100%",
-    minHeight: "42px",
+    minHeight: "40px",
     borderRadius: "12px",
     border: "1px solid #fecaca",
     background: "#fff1f2",
     color: "#b91c1c",
     fontWeight: 700,
+    fontSize: "14px",
     cursor: "pointer",
   },
 
@@ -436,6 +440,39 @@ export const styles = {
     justifyContent: "space-between",
     gap: "12px",
     fontSize: "15px",
+  },
+
+  inRoundSummaryBox: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "6px",
+  },
+
+  inRoundSummaryCell: {
+    background: "#eff6ff",
+    border: "1px solid #bfdbfe",
+    borderRadius: "12px",
+    padding: "6px 8px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "52px",
+  },
+
+  inRoundSummaryLabel: {
+    fontSize: "11px",
+    color: "#6b7280",
+    fontWeight: 700,
+    lineHeight: 1.1,
+  },
+
+  inRoundSummaryValue: {
+    marginTop: "3px",
+    fontSize: "16px",
+    color: "#111827",
+    fontWeight: 800,
+    lineHeight: 1.1,
   },
 
   bottomActionBar: {
@@ -672,19 +709,21 @@ export const styles = {
 
   selectInput: {
     width: "100%",
-    padding: "12px 14px",
+    minHeight: "42px",
+    padding: "10px 12px",
     borderRadius: "12px",
     border: "1px solid #d1d5db",
-    fontSize: "15px",
+    fontSize: "14px",
     background: "#fff",
   },
 
   textInput: {
     flex: 1,
-    padding: "12px 14px",
+    minHeight: "42px",
+    padding: "10px 12px",
     borderRadius: "12px",
     border: "1px solid #d1d5db",
-    fontSize: "15px",
+    fontSize: "14px",
     background: "#fff",
   },
 
@@ -714,15 +753,15 @@ export const styles = {
     height: "100%",
     display: "grid",
     gridTemplateRows: "auto auto 1fr auto",
-    gap: "8px",
+    gap: "6px",
     overflow: "hidden",
   },
 
   inRoundHeader: {
     background: "#eef6ee",
     border: "1px solid #d7e7d7",
-    borderRadius: "14px",
-    padding: "8px 8px",
+    borderRadius: "12px",
+    padding: "6px 8px",
     minHeight: 0,
   },
 
@@ -740,7 +779,7 @@ export const styles = {
     fontSize: "12px",
     color: "#4b5563",
     fontWeight: 600,
-    lineHeight: 1,
+    lineHeight: 1.2,
   },
 
   parSelectorWrap: {
@@ -886,11 +925,11 @@ export const styles = {
     cursor: "pointer",
   },
 
-    fixedScreen: {
+  fixedScreen: {
     height: "100%",
     display: "grid",
     gridTemplateRows: "auto 1fr auto",
-    gap: "8px",
+    gap: "6px",
     overflow: "hidden",
   },
 
@@ -923,15 +962,15 @@ export const styles = {
 
   sectionCardCompact: {
     background: "white",
-    padding: "12px",
-    borderRadius: "16px",
+    padding: "10px",
+    borderRadius: "14px",
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
     overflow: "hidden",
   },
 
   pageTitle: {
     margin: 0,
-    fontSize: "24px",
+    fontSize: "22px",
     lineHeight: 1.1,
     fontWeight: 800,
   },
@@ -970,13 +1009,14 @@ export const styles = {
   },
 
   secondaryButtonCompact: {
-    minHeight: "44px",
+    minHeight: "38px",
     padding: "0 12px",
     borderRadius: "12px",
     border: "1px solid #d1d5db",
     background: "#ffffff",
     color: "#111827",
     fontWeight: 700,
+    fontSize: "14px",
     cursor: "pointer",
     whiteSpace: "nowrap",
   },
@@ -1052,9 +1092,9 @@ export const styles = {
 
   compactControlRow: {
     display: "flex",
-    gap: "8px",
+    gap: "6px",
     flexWrap: "wrap",
-    marginBottom: "8px",
+    marginBottom: "6px",
   },
 
   compactChipWrap: {
@@ -1179,7 +1219,7 @@ export const styles = {
   },
 
   roundPagerMeta: {
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 700,
     color: "#6b7280",
     marginBottom: "10px",
@@ -1198,22 +1238,22 @@ export const styles = {
     background: "#f9fafb",
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
-    padding: "10px",
-    minHeight: "72px",
+    padding: "8px",
+    minHeight: "64px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
   },
 
   statValueCompact: {
-    fontSize: "20px",
+    fontSize: "18px",
     fontWeight: 800,
     lineHeight: 1.1,
   },
 
   statLabelCompact: {
     marginTop: "5px",
-    fontSize: "6px",
+    fontSize: "11px",
     color: "#6b7280",
     lineHeight: 1.2,
   },
@@ -1285,7 +1325,7 @@ export const styles = {
 
   labelCompact: {
     display: "block",
-    marginTop: "4px",
+    marginTop: "2px",
     marginBottom: "4px",
     fontWeight: 700,
     fontSize: "12px",
@@ -1300,16 +1340,16 @@ export const styles = {
   parButtonRowCompact: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "2px",
+    gap: "6px",
   },
 
   parButtonCompact: {
-    minHeight: "16px",
+    minHeight: "32px",
     borderRadius: "12px",
     border: "1px solid #d1d5db",
     background: "#ffffff",
-    fontSize: "8px",
-    fontWeight: 800,
+    fontSize: "13px",
+    fontWeight: 700,
     cursor: "pointer",
   },
 
@@ -1323,14 +1363,14 @@ export const styles = {
     minHeight: 0,
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "4px",
     overflow: "hidden",
   },
 
   inRoundFooterCompact: {
     display: "flex",
     flexDirection: "column",
-    gap: "5px",
+    gap: "6px",
   },
 
   inRoundShotNavRowCompact: {
@@ -1346,37 +1386,37 @@ export const styles = {
   },
 
   lightBlueNavButton: {
-    minHeight: "34px",
+    minHeight: "38px",
     borderRadius: "10px",
     border: "1px solid #93c5fd",
     background: "#dbeafe",
     color: "#1d4ed8",
-    fontWeight: 800,
-    fontSize: "13px",
+    fontWeight: 700,
+    fontSize: "14px",
     cursor: "pointer",
     padding: "6px 10px",
   },
 
   darkBlueNavButton: {
-    minHeight: "34px",
+    minHeight: "38px",
     borderRadius: "10px",
     border: "1px solid #1e3a8a",
     background: "#1d4ed8",
     color: "#ffffff",
-    fontWeight: 800,
-    fontSize: "13px",
+    fontWeight: 700,
+    fontSize: "14px",
     cursor: "pointer",
     padding: "6px 10px",
   },
 
   endRoundButtonCompact: {
-    minHeight: "34px",
+    minHeight: "38px",
     borderRadius: "10px",
     border: "1px solid #dc2626",
     background: "#ef4444",
     color: "#ffffff",
-    fontWeight: 800,
-    fontSize: "13px",
+    fontWeight: 700,
+    fontSize: "14px",
     cursor: "pointer",
     padding: "6px 10px",
   },
@@ -1384,11 +1424,11 @@ export const styles = {
   shotCardCompact: {
     border: "1px solid #93c5fd",
     borderRadius: "12px",
-    padding: "10px",
+    padding: "8px",
     background: "#f8fbff",
     display: "flex",
     flexDirection: "column",
-    gap: "8px",
+    gap: "6px",
     overflow: "hidden",
   },
 
@@ -1404,11 +1444,9 @@ export const styles = {
     minHeight: "5px",
   },
 
-    shotHeaderLineCompact: {
-    fontSize: "11px",
-    fontWeight: 800,
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
+  shotHeaderLineCompact: {
+    fontSize: "13px",
+    fontWeight: 700,
     color: "#000000",
     lineHeight: 1.1,
   },
@@ -1434,7 +1472,7 @@ export const styles = {
     color: "#dc2626",
     fontWeight: 700,
     cursor: "pointer",
-    fontSize: "13px",
+    fontSize: "14px",
     padding: 0,
     lineHeight: 1,
   },
@@ -1442,11 +1480,11 @@ export const styles = {
   lieButtonGridCompact: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-    gap: "6px",
+    gap: "5px",
   },
 
   lieButtonCompact: {
-    minHeight: "34px",
+    minHeight: "30px",
     borderRadius: "10px",
     fontSize: "12px",
     fontWeight: 700,
@@ -1456,57 +1494,70 @@ export const styles = {
 
   resultCockpit: {
     display: "grid",
-    gridTemplateColumns: "36px 1fr 36px",
-    gridTemplateRows: "36px auto 36px",
+    gridTemplateColumns: "60px 1fr 60px",
+    gridTemplateRows: "34px auto 34px",
     gridTemplateAreas: `
       "topLeft topCenter topRight"
       "midLeft center midRight"
       "bottomLeft bottomCenter bottomRight"
     `,
-    gap: "6px",
+    gap: "5px",
     alignItems: "center",
   },
 
   resultArrowButton: {
-    minHeight: "36px",
-    minWidth: "36px",
+    minHeight: "34px",
+    minWidth: "60px",
     borderRadius: "10px",
     border: "1px solid #cbd5e1",
     background: "#fcd1d1",
     color: "#3a424e",
-    fontSize: "16px",
-    fontWeight: 800,
+    fontSize: "10px",
+    fontWeight: 700,
     cursor: "pointer",
     padding: 0,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    lineHeight: 1,
   },
 
   resultArrowButtonActive: {
     background: "#fd7777",
     border: "1px solid #60a5fa",
-    color: "#1d4ed8",
+    color: "#1f2937",
+  },
+
+  resultArrowButtonText: {
+    display: "block",
+    fontSize: "9px",
+    lineHeight: 1.05,
+    textAlign: "center",
   },
 
   shotBottomRowCompact: {
     display: "grid",
     gridTemplateColumns: "1fr auto",
-    gap: "12px",
+    gap: "10px",
     alignItems: "end",
   },
 
   strikeRowCompact: {
     display: "flex",
-    gap: "6px",
+    gap: "5px",
   },
 
   strikeButtonCompact: {
-    width: "38px",
-    height: "38px",
+    minWidth: "44px",
+    height: "30px",
     borderRadius: "10px",
     border: "1px solid #d1d5db",
     background: "#ffffff",
-    fontSize: "20px",
+    fontSize: "12px",
+    fontWeight: 700,
     cursor: "pointer",
-    padding: 0,
+    padding: "0 8px",
   },
 
   strikeButtonCompactActive: {
@@ -1546,17 +1597,22 @@ export const styles = {
     gap: "6px",
   },
 
+  distanceBlockCompact: {
+    display: "flex",
+    justifyContent: "center",
+  },
+
   distanceDisplayMini: {
     minWidth: "78px",
-    minHeight: "34px",
+    minHeight: "30px",
     display: "inline-flex",
     alignItems: "baseline",
     justifyContent: "center",
     gap: "4px",
-    fontSize: "16px",
+    fontSize: "15px",
     fontWeight: 800,
     background: "#eef2ff",
-    padding: "6px 10px",
+    padding: "4px 8px",
     borderRadius: "10px",
     border: "1px solid #c7d2fe",
     color: "#1f2937",
@@ -1571,25 +1627,25 @@ export const styles = {
   keypadMini: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "4px",
+    gap: "3px",
     width: "100%",
-    maxWidth: "126px",
+    maxWidth: "120px",
     margin: "0 auto",
   },
 
   keypadButtonMini: {
-    height: "28px",
+    height: "24px",
     borderRadius: "8px",
     border: "1px solid #d1d5db",
     background: "#ffffff",
     fontWeight: 800,
-    fontSize: "13px",
+    fontSize: "12px",
     cursor: "pointer",
     padding: 0,
   },
 
   keypadButtonMiniSecondary: {
-    height: "28px",
+    height: "24px",
     borderRadius: "8px",
     border: "1px solid #d1d5db",
     background: "#f9fafb",

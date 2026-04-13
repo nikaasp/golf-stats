@@ -11,14 +11,14 @@ const LIE_OPTIONS = [
 ]
 
 const MISS_BUTTONS = [
-  { value: "long_left", label: "NW", area: "topLeft" },
-  { value: "long", label: "N", area: "topCenter" },
-  { value: "long_right", label: "NE", area: "topRight" },
-  { value: "left", label: "L", area: "midLeft" },
-  { value: "right", label: "R", area: "midRight" },
-  { value: "short_left", label: "SW", area: "bottomLeft" },
-  { value: "short", label: "S", area: "bottomCenter" },
-  { value: "short_right", label: "SE", area: "bottomRight" },
+  { value: "long_left", label: "Long Left", area: "topLeft" },
+  { value: "long", label: "Long", area: "topCenter" },
+  { value: "long_right", label: "Long Right", area: "topRight" },
+  { value: "left", label: "Left", area: "midLeft" },
+  { value: "right", label: "Right", area: "midRight" },
+  { value: "short_left", label: "Short Left", area: "bottomLeft" },
+  { value: "short", label: "Short", area: "bottomCenter" },
+  { value: "short_right", label: "Short Right", area: "bottomRight" },
 ]
 
 const STRIKE_OPTIONS = [
@@ -103,7 +103,7 @@ export default function ShotCard({
     >
       <div style={styles.shotCardHeaderCompact}>
         <div style={styles.shotHeaderLineCompact}>
-          {shotTypeLabel.toUpperCase()} #{index + 1}
+          {shotTypeLabel} #{index + 1}
         </div>
 
         <button
@@ -119,6 +119,7 @@ export default function ShotCard({
       </div>
 
       <div>
+        <label style={styles.labelCompact}>Lie</label>
         <div style={styles.lieButtonGridCompact}>
           {LIE_OPTIONS.map((option) => {
             const selected = shot.lie === option.value
@@ -147,16 +148,27 @@ export default function ShotCard({
 
       <div>
         <label style={styles.labelCompact}>
-          TARGET DISTANCE
+          Distance to Flag
           {showHoleLengthHint && (
-            <span style={styles.inlineHintCompact}> (auto-filled)</span>
-          )}{" "}
-          / MISS DIRECTION
+            <span style={styles.inlineHintCompact}> (auto-filled from hole length)</span>
+          )}
         </label>
 
+        <div style={styles.distanceBlockCompact}>
+          <DistancePicker
+            value={shot.distance_to_flag}
+            onChange={(value) => handleFieldChange("distance_to_flag", value)}
+            styles={styles}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label style={styles.labelCompact}>Miss Direction</label>
         <div style={styles.resultCockpit}>
           {MISS_BUTTONS.map((btn) => {
             const selected = shot.miss_pattern === btn.value
+            const words = btn.label.split(" ")
 
             return (
               <button
@@ -172,30 +184,20 @@ export default function ShotCard({
                   handleFieldChange("miss_pattern", selected ? null : btn.value)
                 }}
               >
-                {btn.label}
+                {words.map((word) => (
+                  <span key={word} style={styles.resultArrowButtonText}>
+                    {word}
+                  </span>
+                ))}
               </button>
             )
           })}
-
-          <div
-            style={{
-              gridArea: "center",
-              alignSelf: "center",
-              justifySelf: "center",
-            }}
-          >
-            <DistancePicker
-              value={shot.distance_to_flag}
-              onChange={(value) => handleFieldChange("distance_to_flag", value)}
-              styles={styles}
-            />
-          </div>
         </div>
       </div>
 
       <div style={styles.shotBottomRowCompact}>
         <div>
-          <label style={styles.labelCompact}>BALL-STRIKING</label>
+          <label style={styles.labelCompact}>Ball-Striking</label>
           <div style={styles.strikeRowCompact}>
             {STRIKE_OPTIONS.map((option) => (
               <button
@@ -219,7 +221,7 @@ export default function ShotCard({
         </div>
 
         <div>
-          <label style={styles.labelCompact}>PENALTIES</label>
+          <label style={styles.labelCompact}>Penalty</label>
           <div style={styles.penaltyCheckboxRow}>
             {["+1", "+2"].map((value) => {
               const penaltyNumber = value === "+1" ? 1 : 2

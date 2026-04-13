@@ -81,18 +81,18 @@ export default function InRoundScreen({
       </div>
 
       <div style={styles.inRoundFooterCompact}>
-        <div style={styles.summaryBox}>
-          <div style={styles.summaryInline}>
-            <span>Shots logged</span>
-            <strong>{shotTotals?.shotCount ?? 0}</strong>
+        <div style={styles.inRoundSummaryBox}>
+          <div style={styles.inRoundSummaryCell}>
+            <span style={styles.inRoundSummaryLabel}>Shots</span>
+            <strong style={styles.inRoundSummaryValue}>{shotTotals?.shotCount ?? 0}</strong>
           </div>
-          <div style={styles.summaryInline}>
-            <span>Penalty strokes</span>
-            <strong>{shotTotals?.autoPenalty ?? 0}</strong>
+          <div style={styles.inRoundSummaryCell}>
+            <span style={styles.inRoundSummaryLabel}>Penalty</span>
+            <strong style={styles.inRoundSummaryValue}>{shotTotals?.autoPenalty ?? 0}</strong>
           </div>
-          <div style={styles.summaryInline}>
-            <span>Hole score</span>
-            <strong>{shotTotals?.totalScore ?? 0}</strong>
+          <div style={styles.inRoundSummaryCell}>
+            <span style={styles.inRoundSummaryLabel}>Score</span>
+            <strong style={styles.inRoundSummaryValue}>{shotTotals?.totalScore ?? 0}</strong>
           </div>
         </div>
 
