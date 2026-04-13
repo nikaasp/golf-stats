@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { supabase } from "./supabase"
+import { supabase, supabaseConfigError } from "./supabase"
 
 import AuthScreen from "./components/AuthScreen"
 import HomeScreen from "./components/HomeScreen"
@@ -85,9 +85,29 @@ function getSavedCoursePar(courseData, holeNumber) {
   return holeData?.par != null ? String(holeData.par) : ""
 }
 
+function ConfigErrorScreen({ message }) {
+  return (
+    <div className="app-shell">
+      <div className="config-error-card">
+        <p className="config-error-eyebrow">Setup Required</p>
+        <h1 className="config-error-title">Supabase configuration is missing</h1>
+        <p className="config-error-body">{message}</p>
+        <div className="config-error-code">
+          <div>VITE_SUPABASE_URL=...</div>
+          <div>VITE_SUPABASE_ANON_KEY=...</div>
+        </div>
+        <p className="config-error-help">
+          If you are deploying on Vercel, add both values in Project Settings under
+          Environment Variables, then redeploy the app.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function App() {
   const [session, setSession] = useState(null)
-  const [authLoading, setAuthLoading] = useState(true)
+  const [authLoading, setAuthLoading] = useState(() => Boolean(supabase))
 
   const [screen, setScreen] = useState("home")
   const [loading, setLoading] = useState(false)
@@ -135,6 +155,10 @@ function App() {
 
 
   useEffect(() => {
+    if (!supabase) {
+      return
+    }
+
     let mounted = true
 
     async function loadSession() {
@@ -699,6 +723,10 @@ function App() {
   }, [selectedCourseData, hole])
 
   const currentHoleLength = currentCourseHoleData?.length_m ?? null
+
+  if (supabaseConfigError) {
+    return <ConfigErrorScreen message={supabaseConfigError} />
+  }
 
   if (authLoading) {
     return (

@@ -245,6 +245,48 @@ img {
   border-color: #fca5a5;
 }
 
+.config-error-card {
+  margin: auto 0;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #dbe4f0;
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.config-error-eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2563eb;
+  margin-bottom: 10px;
+}
+
+.config-error-title {
+  font-size: 1.6rem;
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.config-error-body,
+.config-error-help {
+  color: #475569;
+  margin-bottom: 12px;
+}
+
+.config-error-code {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin-bottom: 12px;
+  overflow-x: auto;
+}
+
 @media (max-width: 640px) {
   .app-shell {
     padding: 8px;
