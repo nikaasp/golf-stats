@@ -31,11 +31,11 @@ export default function InRoundScreen({
     <div style={styles.screenContainer}>
       <div style={styles.inRoundHeader}>
         <div style={styles.inRoundHeaderTop}>
-          {course || "Course"} · {date}
+          {course || "Course"} | {date}
         </div>
 
         <div style={styles.inRoundHeaderBottom}>
-          Hole {hole} · Par {par || "-"} · Tee to flag {teeToFlag}
+          Hole {hole} | Par {par || "-"} | Tee to flag {teeToFlag}
         </div>
       </div>
 

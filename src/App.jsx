@@ -91,6 +91,14 @@ function getSavedCoursePar(courseData, holeNumber) {
   return holeData?.par != null ? String(holeData.par) : ""
 }
 
+function getSavedCourseLength(courseData, holeNumber) {
+  if (!courseData?.hole_pars?.length) return null
+
+  const holeData = courseData.hole_pars.find((h) => Number(h.hole) === Number(holeNumber))
+  const length = Number(holeData?.length_m)
+  return Number.isFinite(length) && length > 0 ? length : null
+}
+
 function ConfigErrorScreen({ message }) {
   return (
     <div className="app-shell">
@@ -351,12 +359,20 @@ function App() {
       setPar("")
     }
 
-    resetShotInputs()
+    resetShotInputs(getSavedCourseLength(selectedCourseData, 1))
     setScreen("inRound")
   }
 
-  function resetShotInputs() {
-    setShots([makeShot(1)])
+  function resetShotInputs(initialHoleLength = null) {
+    const firstShot = makeShot(1)
+    const holeLengthNumber = Number(initialHoleLength)
+
+    if (Number.isFinite(holeLengthNumber) && holeLengthNumber > 0) {
+      firstShot.distance_to_flag = holeLengthNumber
+      firstShot.lie = "Tee"
+    }
+
+    setShots([firstShot])
     setActiveShotIndex(0)
   }
 
@@ -591,7 +607,7 @@ function App() {
     setNewCoursePars(finalPars)
     setHole(hole + 1)
     setPar(isNewCourse ? "" : getSavedCoursePar(selectedCourseData, hole + 1))
-    resetShotInputs()
+    resetShotInputs(getSavedCourseLength(selectedCourseData, hole + 1))
   }
 
   async function skipHole() {
@@ -634,7 +650,7 @@ function App() {
 
     setHole(hole + 1)
     setPar(isNewCourse ? "" : getSavedCoursePar(selectedCourseData, hole + 1))
-    resetShotInputs()
+    resetShotInputs(getSavedCourseLength(selectedCourseData, hole + 1))
   }
 
   function currentHoleHasData() {

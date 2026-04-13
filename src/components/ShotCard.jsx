@@ -15,6 +15,7 @@ const MISS_BUTTONS = [
   { value: "long", label: "Long", area: "topCenter" },
   { value: "long_right", label: "Long Right", area: "topRight" },
   { value: "left", label: "Left", area: "midLeft" },
+  { value: "spot_on", label: "On Line", area: "center" },
   { value: "right", label: "Right", area: "midRight" },
   { value: "short_left", label: "Short Left", area: "bottomLeft" },
   { value: "short", label: "Short", area: "bottomCenter" },
@@ -102,8 +103,11 @@ export default function ShotCard({
       onClick={setActive}
     >
       <div style={styles.shotCardHeaderCompact}>
-        <div style={styles.shotHeaderLineCompact}>
-          {shotTypeLabel} #{index + 1}
+        <div>
+          <div style={styles.shotHeaderMetaCompact}>
+            Shot {index + 1} of {shotCount}
+          </div>
+          <div style={styles.shotHeaderLineCompact}>{shotTypeLabel}</div>
         </div>
 
         <button
@@ -118,7 +122,16 @@ export default function ShotCard({
         </button>
       </div>
 
-      <div>
+      <div style={styles.shotInfoPillRowCompact}>
+        <div style={styles.shotInfoPillCompact}>
+          Lie: <strong>{shot.lie || "Select"}</strong>
+        </div>
+        <div style={styles.shotInfoPillCompact}>
+          Distance: <strong>{shot.distance_to_flag || "--"} m</strong>
+        </div>
+      </div>
+
+      <div style={styles.shotSectionCompact}>
         <label style={styles.labelCompact}>Lie</label>
         <div style={styles.lieButtonGridCompact}>
           {LIE_OPTIONS.map((option) => {
@@ -146,13 +159,13 @@ export default function ShotCard({
         </div>
       </div>
 
-      <div>
-        <label style={styles.labelCompact}>
-          Distance to Flag
+      <div style={styles.shotSectionCompact}>
+        <div style={styles.shotSectionHeaderCompact}>
+          <label style={styles.labelCompact}>Distance to Flag</label>
           {showHoleLengthHint && (
-            <span style={styles.inlineHintCompact}> (auto-filled from hole length)</span>
+            <span style={styles.inlineHintBadgeCompact}>Auto from hole length</span>
           )}
-        </label>
+        </div>
 
         <div style={styles.distanceBlockCompact}>
           <DistancePicker
@@ -163,7 +176,7 @@ export default function ShotCard({
         </div>
       </div>
 
-      <div>
+      <div style={styles.shotSectionCompact}>
         <label style={styles.labelCompact}>Miss Direction</label>
         <div style={styles.resultCockpit}>
           {MISS_BUTTONS.map((btn) => {
@@ -196,7 +209,7 @@ export default function ShotCard({
       </div>
 
       <div style={styles.shotBottomRowCompact}>
-        <div>
+        <div style={styles.shotSectionCompact}>
           <label style={styles.labelCompact}>Ball-Striking</label>
           <div style={styles.strikeRowCompact}>
             {STRIKE_OPTIONS.map((option) => (
@@ -220,7 +233,7 @@ export default function ShotCard({
           </div>
         </div>
 
-        <div>
+        <div style={styles.shotSectionCompact}>
           <label style={styles.labelCompact}>Penalty</label>
           <div style={styles.penaltyCheckboxRow}>
             {["+1", "+2"].map((value) => {

@@ -1365,6 +1365,20 @@ export const styles = {
     fontWeight: 400,
   },
 
+  inlineHintBadgeCompact: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "20px",
+    padding: "0 8px",
+    borderRadius: "999px",
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    fontSize: "10px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
+  },
+
   parButtonRowCompact: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -1467,16 +1481,55 @@ export const styles = {
   shotCardHeaderCompact: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    gap: "3px",
+    alignItems: "flex-start",
+    gap: "8px",
     minHeight: "5px",
   },
 
-  shotHeaderLineCompact: {
-    fontSize: "13px",
+  shotHeaderMetaCompact: {
+    fontSize: "11px",
     fontWeight: 700,
-    color: "#000000",
+    color: "#6b7280",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    marginBottom: "3px",
+  },
+
+  shotHeaderLineCompact: {
+    fontSize: "18px",
+    fontWeight: 800,
+    color: "#111827",
     lineHeight: 1.1,
+  },
+
+  shotInfoPillRowCompact: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "6px",
+  },
+
+  shotInfoPillCompact: {
+    background: "#ffffff",
+    border: "1px solid #dbe4f0",
+    borderRadius: "10px",
+    padding: "7px 8px",
+    fontSize: "12px",
+    color: "#4b5563",
+    lineHeight: 1.2,
+  },
+
+  shotSectionCompact: {
+    background: "#ffffff",
+    border: "1px solid #dbe4f0",
+    borderRadius: "10px",
+    padding: "7px",
+  },
+
+  shotSectionHeaderCompact: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "8px",
   },
 
   shotTypeCompact: {
@@ -1538,8 +1591,8 @@ export const styles = {
     minWidth: "60px",
     borderRadius: "10px",
     border: "1px solid #cbd5e1",
-    background: "#fcd1d1",
-    color: "#3a424e",
+    background: "#ffffff",
+    color: "#374151",
     fontSize: "10px",
     fontWeight: 700,
     cursor: "pointer",
@@ -1552,9 +1605,9 @@ export const styles = {
   },
 
   resultArrowButtonActive: {
-    background: "#fd7777",
+    background: "#dbeafe",
     border: "1px solid #60a5fa",
-    color: "#1f2937",
+    color: "#1d4ed8",
   },
 
   resultArrowButtonText: {
@@ -1568,7 +1621,7 @@ export const styles = {
     display: "grid",
     gridTemplateColumns: "1fr auto",
     gap: "10px",
-    alignItems: "end",
+    alignItems: "stretch",
   },
 
   strikeRowCompact: {
