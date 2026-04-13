@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react"
+import RoundFilters from "./RoundFilters"
 import { roundMatchesTagFilter } from "../utils/roundTags"
+
+function getRoundDateOnly(round) {
+  return String(round?.date || "").slice(0, 10)
+}
 
 export default function RoundsListScreen({
   reviewRounds,
@@ -12,20 +17,45 @@ export default function RoundsListScreen({
 }) {
   const today = new Date().toISOString().slice(0, 10)
   const [index, setIndex] = useState(0)
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState(today)
-  const [courseId, setCourseId] = useState("all")
-  const [tagFilter, setTagFilter] = useState("")
+
+  const [draftStartDate, setDraftStartDate] = useState("")
+  const [draftEndDate, setDraftEndDate] = useState(today)
+  const [draftCourseId, setDraftCourseId] = useState("all")
+  const [draftTagFilter, setDraftTagFilter] = useState("")
+
+  const [appliedFilters, setAppliedFilters] = useState({
+    startDate: "",
+    endDate: today,
+    courseId: "all",
+    tagFilter: "",
+  })
+
+  const applyFilters = () => {
+    setAppliedFilters({
+      startDate: draftStartDate,
+      endDate: draftEndDate,
+      courseId: draftCourseId,
+      tagFilter: draftTagFilter,
+    })
+    setIndex(0)
+  }
 
   const filteredRounds = useMemo(() => {
     return reviewRounds.filter((round) => {
-      if (startDate && round.date < startDate) return false
-      if (endDate && round.date > endDate) return false
-      if (courseId !== "all" && String(round.course_id || "") !== courseId) return false
-      if (!roundMatchesTagFilter(round, tagFilter)) return false
+      const roundDate = getRoundDateOnly(round)
+
+      if (appliedFilters.startDate && roundDate < appliedFilters.startDate) return false
+      if (appliedFilters.endDate && roundDate > appliedFilters.endDate) return false
+      if (
+        appliedFilters.courseId !== "all" &&
+        String(round.course_id || "") !== appliedFilters.courseId
+      ) {
+        return false
+      }
+      if (!roundMatchesTagFilter(round, appliedFilters.tagFilter)) return false
       return true
     })
-  }, [courseId, endDate, reviewRounds, startDate, tagFilter])
+  }, [appliedFilters, reviewRounds])
 
   const safeIndex = useMemo(() => {
     if (!filteredRounds.length) return 0
@@ -41,52 +71,20 @@ export default function RoundsListScreen({
           <h1 style={styles.pageTitle}>Rounds Played</h1>
           <p style={styles.mutedText}>Filter by time period, course, or tags.</p>
 
-          <div style={styles.analyticsFilterCard}>
-            <div style={styles.analyticsFilterGrid}>
-              <div>
-                <label style={styles.label}>Start date</label>
-                <input
-                  style={styles.inputCompact}
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={styles.label}>End date</label>
-                <input
-                  style={styles.inputCompact}
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <label style={styles.label}>Course</label>
-            <select
-              style={styles.inputCompact}
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-            >
-              <option value="all">All courses</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-
-            <label style={styles.label}>Tag</label>
-            <input
-              style={styles.inputCompact}
-              type="text"
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              placeholder="rain, windy, tournament"
-            />
-          </div>
+          <RoundFilters
+            styles={styles}
+            courses={courses}
+            startDate={draftStartDate}
+            setStartDate={setDraftStartDate}
+            endDate={draftEndDate}
+            setEndDate={setDraftEndDate}
+            courseId={draftCourseId}
+            setCourseId={setDraftCourseId}
+            tagFilter={draftTagFilter}
+            setTagFilter={setDraftTagFilter}
+            onApply={applyFilters}
+            loading={loading}
+          />
         </div>
       </div>
 
@@ -103,7 +101,7 @@ export default function RoundsListScreen({
 
             <div style={styles.roundListItemCompact}>
               <div style={styles.roundCourse}>{round.course || "Untitled round"}</div>
-              <div style={styles.roundDate}>{round.date || "-"}</div>
+              <div style={styles.roundDate}>{getRoundDateOnly(round) || "-"}</div>
 
               {Array.isArray(round.tags) && round.tags.length > 0 && (
                 <div style={styles.tagRowCompact}>
@@ -152,9 +150,7 @@ export default function RoundsListScreen({
 
           <button
             style={styles.primaryButton}
-            onClick={() =>
-              setIndex((prev) => Math.min(filteredRounds.length - 1, prev + 1))
-            }
+            onClick={() => setIndex((prev) => Math.min(filteredRounds.length - 1, prev + 1))}
             disabled={!filteredRounds.length || safeIndex === filteredRounds.length - 1}
           >
             Next

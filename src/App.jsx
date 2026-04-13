@@ -35,6 +35,7 @@ import {
   inferHoleValuesFromShots,
   makeShot,
 } from "./utils/analytics"
+import { buildSgTimeline } from "./utils/analyticsTransforms"
 
 import {
   createRound,
@@ -42,6 +43,7 @@ import {
   fetchRoundBundle,
   fetchRounds,
 } from "./services/roundsService"
+import { fetchShotsForRoundIds } from "./services/analyticsService"
 
 import { insertHole, insertSkippedHole } from "./services/holesService"
 import { insertShots } from "./services/shotsService"
@@ -123,6 +125,7 @@ function App() {
 
   const [holesData, setHolesData] = useState([])
   const [roundShots, setRoundShots] = useState([])
+  const [homeTrendData, setHomeTrendData] = useState([])
 
   const [reviewRounds, setReviewRounds] = useState([])
   const [selectedReviewRound, setSelectedReviewRound] = useState(null)
@@ -145,7 +148,19 @@ function App() {
       alert("Could not load rounds: " + error.message)
       return
     }
-    setReviewRounds(hydrateRoundsWithStoredTags(data || []))
+    const hydratedRounds = hydrateRoundsWithStoredTags(data || [])
+    setReviewRounds(hydratedRounds)
+
+    const roundIds = hydratedRounds.map((round) => round.id)
+    const shotsRes = await fetchShotsForRoundIds(roundIds)
+
+    if (shotsRes.error) {
+      alert("Could not load SG trend shots: " + shotsRes.error.message)
+      return
+    }
+
+    const { timeline } = buildSgTimeline(hydratedRounds, shotsRes.data || [])
+    setHomeTrendData(timeline)
   }, [])
 
   const loadCourses = useCallback(async () => {
@@ -767,6 +782,7 @@ function App() {
       <div className="app-shell">
         <HomeScreen
           styles={styles}
+          homeTrendData={homeTrendData}
           goToPlayRound={() => setScreen("playRound")}
           goToRounds={() => setScreen("rounds")}
           goToAnalytics={() => setScreen("analytics")}

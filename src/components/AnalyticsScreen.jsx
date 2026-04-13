@@ -3,6 +3,7 @@ import SgLineChart from "./SgLineChart"
 import PercentLineChart from "./PercentLineChart"
 import PuttsLineChart from "./PuttsLineChart"
 import PieChart from "./PieChart"
+import RoundFilters from "./RoundFilters"
 import {
   fetchRoundsForAnalytics,
   fetchShotsForRoundIds,
@@ -31,23 +32,39 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
   const [page, setPage] = useState(0)
   const pages = ["SG", "Accuracy", "Misses"]
 
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState(today)
-  const [courseId, setCourseId] = useState("all")
-  const [tagFilter, setTagFilter] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [draftStartDate, setDraftStartDate] = useState("")
+  const [draftEndDate, setDraftEndDate] = useState(today)
+  const [draftCourseId, setDraftCourseId] = useState("all")
+  const [draftTagFilter, setDraftTagFilter] = useState("")
 
+  const [appliedFilters, setAppliedFilters] = useState({
+    startDate: "",
+    endDate: today,
+    courseId: "all",
+    tagFilter: "",
+  })
+
+  const [loading, setLoading] = useState(false)
   const [rounds, setRounds] = useState([])
   const [shots, setShots] = useState([])
   const [holes, setHoles] = useState([])
+
+  const applyFilters = useCallback(() => {
+    setAppliedFilters({
+      startDate: draftStartDate,
+      endDate: draftEndDate,
+      courseId: draftCourseId,
+      tagFilter: draftTagFilter,
+    })
+  }, [draftCourseId, draftEndDate, draftStartDate, draftTagFilter])
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true)
 
     const roundsRes = await fetchRoundsForAnalytics({
-      startDate,
-      endDate,
-      courseId,
+      startDate: appliedFilters.startDate,
+      endDate: appliedFilters.endDate,
+      courseId: appliedFilters.courseId,
     })
 
     if (roundsRes.error) {
@@ -58,7 +75,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
 
     const taggedRounds = hydrateRoundsWithStoredTags(roundsRes.data || [])
     const filteredRounds = taggedRounds.filter((round) =>
-      roundMatchesTagFilter(round, tagFilter)
+      roundMatchesTagFilter(round, appliedFilters.tagFilter)
     )
 
     setRounds(filteredRounds)
@@ -84,7 +101,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
 
     setShots(shotsRes.data || [])
     setHoles(holesRes.data || [])
-  }, [courseId, endDate, startDate, tagFilter])
+  }, [appliedFilters])
 
   useEffect(() => {
     const timerId = setTimeout(() => {
@@ -154,56 +171,20 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
             ))}
           </div>
 
-          <div style={styles.analyticsFilterCard}>
-            <div style={styles.analyticsFilterGrid}>
-              <div>
-                <label style={styles.label}>Start date</label>
-                <input
-                  style={styles.inputCompact}
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label style={styles.label}>End date</label>
-                <input
-                  style={styles.inputCompact}
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <label style={styles.label}>Course</label>
-            <select
-              style={styles.inputCompact}
-              value={courseId}
-              onChange={(e) => setCourseId(e.target.value)}
-            >
-              <option value="all">All courses</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {course.name}
-                </option>
-              ))}
-            </select>
-
-            <label style={styles.label}>Tag</label>
-            <input
-              style={styles.inputCompact}
-              type="text"
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              placeholder="rain, windy, tournament"
-            />
-
-            <button style={styles.primaryButton} onClick={loadAnalytics} disabled={loading}>
-              {loading ? "Loading..." : "Apply Filter"}
-            </button>
-          </div>
+          <RoundFilters
+            styles={styles}
+            courses={courses}
+            startDate={draftStartDate}
+            setStartDate={setDraftStartDate}
+            endDate={draftEndDate}
+            setEndDate={setDraftEndDate}
+            courseId={draftCourseId}
+            setCourseId={setDraftCourseId}
+            tagFilter={draftTagFilter}
+            setTagFilter={setDraftTagFilter}
+            onApply={applyFilters}
+            loading={loading}
+          />
         </div>
       </div>
 

@@ -1,7 +1,10 @@
+import HomeTrendSparkline from "./HomeTrendSparkline"
+
 export default function HomeScreen({
   goToPlayRound,
   goToRounds,
   goToAnalytics,
+  homeTrendData,
   styles,
 }) {
   return (
@@ -9,9 +12,7 @@ export default function HomeScreen({
       <div style={styles.fixedTopSection}>
         <div style={styles.headerSparklineCard}>
           <div style={styles.headerSparklineLabel}>SG total trend</div>
-          <div style={styles.headerSparklinePlaceholder}>
-            thin black SG line chart here
-          </div>
+          <HomeTrendSparkline data={homeTrendData} styles={styles} />
         </div>
       </div>
 
