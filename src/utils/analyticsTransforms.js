@@ -91,6 +91,17 @@ function calculateSlopes(data, keys) {
   return result
 }
 
+function sortRoundsChronologically(rounds = []) {
+  return [...rounds].sort((a, b) => {
+    const dateA = String(a?.date || "")
+    const dateB = String(b?.date || "")
+
+    if (dateA !== dateB) return dateA.localeCompare(dateB)
+
+    return String(a?.id || "").localeCompare(String(b?.id || ""))
+  })
+}
+
 export function buildSgTimeline(rounds = [], shots = []) {
   const shotsByRound = {}
 
@@ -99,7 +110,7 @@ export function buildSgTimeline(rounds = [], shots = []) {
     shotsByRound[shot.round_id].push(shot)
   }
 
-  const timeline = rounds
+  const timeline = sortRoundsChronologically(rounds)
     .map((round) => {
       const roundShots = (shotsByRound[round.id] || []).filter((shot) =>
         Number.isFinite(Number(shot.strokes_gained))
@@ -152,7 +163,7 @@ export function buildAccuracyTimeline(rounds = [], holes = []) {
     holesByRound[hole.round_id].push(hole)
   }
 
-  return rounds.map((round) => {
+  return sortRoundsChronologically(rounds).map((round) => {
     const roundHoles = (holesByRound[round.id] || []).filter((h) => !h.skipped)
 
     const fairwayEligible = roundHoles.filter((h) => Number(h.par) > 3)
@@ -183,7 +194,7 @@ export function buildPuttsTimeline(rounds = [], holes = []) {
     holesByRound[hole.round_id].push(hole)
   }
 
-  return rounds.map((round) => {
+  return sortRoundsChronologically(rounds).map((round) => {
     const roundHoles = (holesByRound[round.id] || []).filter((h) => !h.skipped)
     const puttValues = roundHoles
       .map((h) => Number(h.putts))
