@@ -134,6 +134,17 @@ export const styles = {
     background: "white",
   },
 
+  inputCompact: {
+    width: "100%",
+    minHeight: "38px",
+    padding: "8px 10px",
+    fontSize: "14px",
+    borderRadius: "12px",
+    border: "1px solid #d1d5db",
+    boxSizing: "border-box",
+    background: "white",
+  },
+
   primaryButton: {
     marginTop: "12px",
     width: "100%",
@@ -966,6 +977,21 @@ export const styles = {
     borderRadius: "14px",
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
     overflow: "hidden",
+  },
+
+  analyticsFilterCard: {
+    marginTop: "10px",
+    paddingTop: "10px",
+    borderTop: "1px solid #e5e7eb",
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+  },
+
+  analyticsFilterGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
   },
 
   pageTitle: {

@@ -3,7 +3,7 @@ import { supabase } from "../supabase"
 export async function fetchRoundsForAnalytics({ startDate, endDate, courseId }) {
   let query = supabase
     .from("rounds")
-    .select("id, date, course, course_id")
+    .select("*")
     .order("date", { ascending: true })
 
   if (startDate) query = query.gte("date", startDate)

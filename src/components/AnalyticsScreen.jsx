@@ -20,20 +20,21 @@ import {
   MISS_PATTERN_COLORS,
 } from "../utils/missPatternConfig"
 import { SG_CATEGORY_LABELS } from "../utils/sgConfig"
+import {
+  hydrateRoundsWithStoredTags,
+  roundMatchesTagFilter,
+} from "../utils/roundTags"
 
-export default function AnalyticsScreen({
-  courses,
-  styles,
-  goHome,
-}) {
+export default function AnalyticsScreen({ courses, styles, goHome }) {
   const today = new Date().toISOString().slice(0, 10)
 
   const [page, setPage] = useState(0)
-  const pages = ["Filters", "SG", "Accuracy", "Misses"]
+  const pages = ["SG", "Accuracy", "Misses"]
 
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState(today)
   const [courseId, setCourseId] = useState("all")
+  const [tagFilter, setTagFilter] = useState("")
   const [loading, setLoading] = useState(false)
 
   const [rounds, setRounds] = useState([])
@@ -55,10 +56,14 @@ export default function AnalyticsScreen({
       return
     }
 
-    const roundsData = roundsRes.data || []
-    setRounds(roundsData)
+    const taggedRounds = hydrateRoundsWithStoredTags(roundsRes.data || [])
+    const filteredRounds = taggedRounds.filter((round) =>
+      roundMatchesTagFilter(round, tagFilter)
+    )
 
-    const roundIds = roundsData.map((r) => r.id)
+    setRounds(filteredRounds)
+
+    const roundIds = filteredRounds.map((round) => round.id)
 
     const [shotsRes, holesRes] = await Promise.all([
       fetchShotsForRoundIds(roundIds),
@@ -79,7 +84,7 @@ export default function AnalyticsScreen({
 
     setShots(shotsRes.data || [])
     setHoles(holesRes.data || [])
-  }, [courseId, endDate, startDate])
+  }, [courseId, endDate, startDate, tagFilter])
 
   useEffect(() => {
     const timerId = setTimeout(() => {
@@ -131,48 +136,50 @@ export default function AnalyticsScreen({
       <div style={styles.fixedTopSection}>
         <div style={styles.sectionCardCompact}>
           <h1 style={styles.pageTitle}>Analytics</h1>
-          <p style={styles.mutedText}>
-            Filter your rounds and view trends across sessions.
-          </p>
+          <p style={styles.mutedText}>Filter your rounds and view trends across sessions.</p>
 
           <div style={styles.screenStepPills}>
             {pages.map((label, index) => (
-              <div
+              <button
                 key={label}
+                type="button"
+                onClick={() => setPage(index)}
                 style={{
                   ...styles.screenStepPill,
                   ...(page === index ? styles.screenStepPillActive : {}),
                 }}
               >
                 {label}
-              </div>
+              </button>
             ))}
           </div>
-        </div>
-      </div>
 
-      <div style={styles.fixedMainSection}>
-        {page === 0 && (
-          <div style={styles.sectionCardCompact}>
-            <label style={styles.label}>Start date</label>
-            <input
-              style={styles.input}
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
+          <div style={styles.analyticsFilterCard}>
+            <div style={styles.analyticsFilterGrid}>
+              <div>
+                <label style={styles.label}>Start date</label>
+                <input
+                  style={styles.inputCompact}
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+              </div>
 
-            <label style={styles.label}>End date</label>
-            <input
-              style={styles.input}
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+              <div>
+                <label style={styles.label}>End date</label>
+                <input
+                  style={styles.inputCompact}
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            </div>
 
             <label style={styles.label}>Course</label>
             <select
-              style={styles.input}
+              style={styles.inputCompact}
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
             >
@@ -184,22 +191,33 @@ export default function AnalyticsScreen({
               ))}
             </select>
 
+            <label style={styles.label}>Tag</label>
+            <input
+              style={styles.inputCompact}
+              type="text"
+              value={tagFilter}
+              onChange={(e) => setTagFilter(e.target.value)}
+              placeholder="rain, windy, tournament"
+            />
+
             <button style={styles.primaryButton} onClick={loadAnalytics} disabled={loading}>
               {loading ? "Loading..." : "Apply Filter"}
             </button>
           </div>
-        )}
+        </div>
+      </div>
 
-        {page === 1 && <SgLineChart data={timeline} slopes={slopes} styles={styles} />}
+      <div style={styles.fixedMainSection}>
+        {page === 0 && <SgLineChart data={timeline} slopes={slopes} styles={styles} />}
 
-        {page === 2 && (
+        {page === 1 && (
           <div style={styles.fixedChartGrid}>
             <PercentLineChart data={accuracyTimeline} styles={styles} />
             <PuttsLineChart data={puttsTimeline} styles={styles} />
           </div>
         )}
 
-        {page === 3 && (
+        {page === 2 && (
           <div style={styles.sectionCardCompact}>
             <h2 style={styles.sectionTitle}>Miss Patterns by Category</h2>
 
@@ -217,30 +235,13 @@ export default function AnalyticsScreen({
       </div>
 
       <div style={styles.fixedBottomSection}>
-        <div style={styles.bottomNavRowThree}>
-          <button
-            style={styles.secondaryButton}
-            onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-            disabled={page === 0}
-          >
-            Back
-          </button>
-
+        <div style={styles.bottomNavRow}>
           <button style={styles.secondaryButton} onClick={goHome}>
             Home
           </button>
 
-          <button
-            style={styles.primaryButton}
-            onClick={() => {
-              if (page < pages.length - 1) {
-                setPage((prev) => prev + 1)
-              } else {
-                goHome()
-              }
-            }}
-          >
-            {page < pages.length - 1 ? "Next" : "Done"}
+          <button style={styles.primaryButton} onClick={goHome}>
+            Done
           </button>
         </div>
       </div>

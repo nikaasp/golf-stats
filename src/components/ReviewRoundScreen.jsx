@@ -41,16 +41,29 @@ function countsToPieChartData(counts = {}) {
     }))
 }
 
+function normalizeTagInput(value) {
+  return Array.from(
+    new Set(
+      String(value || "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    )
+  )
+}
+
 export default function ReviewRoundScreen({
   selectedReviewRound,
   selectedReviewShots = [],
   reviewSummary,
+  updateRoundTags,
   deleteRound,
   loading,
   goHome,
   styles,
 }) {
   const [page, setPage] = useState(0)
+  const [tagInput, setTagInput] = useState(() => (selectedReviewRound?.tags || []).join(", "))
   const pages = ["Overview", "Scorecard", "Charts"]
 
   const fwChart = [
@@ -119,6 +132,24 @@ export default function ReviewRoundScreen({
                 {label}
               </button>
             ))}
+          </div>
+
+          <div style={styles.analyticsFilterCard}>
+            <label style={styles.label}>Round tags</label>
+            <input
+              style={styles.inputCompact}
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="rain, windy, casual"
+            />
+            <button
+              style={styles.primaryButton}
+              onClick={() => updateRoundTags(selectedReviewRound?.id, normalizeTagInput(tagInput))}
+              disabled={!selectedReviewRound?.id}
+            >
+              Save Tags
+            </button>
           </div>
         </div>
       </div>

@@ -45,6 +45,10 @@ import {
 
 import { insertHole, insertSkippedHole } from "./services/holesService"
 import { insertShots } from "./services/shotsService"
+import {
+  hydrateRoundsWithStoredTags,
+  setStoredRoundTags,
+} from "./utils/roundTags"
 
 function getHoleLengthFromShots(validShots = []) {
   if (!Array.isArray(validShots) || validShots.length === 0) return null
@@ -141,7 +145,7 @@ function App() {
       alert("Could not load rounds: " + error.message)
       return
     }
-    setReviewRounds(data || [])
+    setReviewRounds(hydrateRoundsWithStoredTags(data || []))
   }, [])
 
   const loadCourses = useCallback(async () => {
@@ -277,7 +281,7 @@ function App() {
     }
   }
 
-  async function handleStartRound() {
+  async function handleStartRound(roundTags = []) {
     if (isNewCourse) {
       if (!course.trim()) {
         alert("Please enter a course name")
@@ -312,11 +316,14 @@ function App() {
       return
     }
 
+    const createdRoundId = data[0].id
+    setStoredRoundTags(createdRoundId, roundTags)
+
     if (!isNewCourse && courseId) {
       await updateCourseLastPlayed(courseId)
     }
 
-    setRoundId(data[0].id)
+    setRoundId(createdRoundId)
     setCourse(courseName)
     setHole(1)
     setNewCoursePars([])
@@ -668,6 +675,20 @@ function App() {
     await loadCourses()
   }
 
+  function updateRoundTags(roundIdValue, tags) {
+    setStoredRoundTags(roundIdValue, tags)
+
+    setReviewRounds((prev) =>
+      prev.map((round) =>
+        round.id === roundIdValue ? { ...round, tags: tags } : round
+      )
+    )
+
+    setSelectedReviewRound((prev) =>
+      prev?.id === roundIdValue ? { ...prev, tags } : prev
+    )
+  }
+
   function goHomeAndReset() {
     setScreen("home")
     setRoundId(null)
@@ -701,11 +722,6 @@ function App() {
   const roundSgSummary = useMemo(
     () => summarizeRoundStrokesGained(roundShots),
     [roundShots]
-  )
-
-  const reviewSgSummary = useMemo(
-    () => summarizeRoundStrokesGained(selectedReviewShots),
-    [selectedReviewShots]
   )
 
   const selectedCourseData =
@@ -805,7 +821,7 @@ function App() {
           onSaveHole={saveHole}
           onSkipHole={skipHole}
           onEndRound={endRoundNow}
-          holeLength={currentHoleLength}   // 👈 ADD THIS LINE
+          holeLength={currentHoleLength}
         />
       </div>
     )
@@ -817,6 +833,7 @@ function App() {
       <div className="app-shell">
         <RoundsListScreen
           reviewRounds={reviewRounds}
+          courses={courses}
           loadRoundDetailsForReview={loadRoundDetailsForReview}
           deleteRound={deleteRound}
           loading={loading}
@@ -861,7 +878,7 @@ function App() {
           selectedReviewRound={selectedReviewRound}
           selectedReviewShots={selectedReviewShots}
           reviewSummary={reviewSummary}
-          reviewSgSummary={reviewSgSummary}
+          updateRoundTags={updateRoundTags}
           deleteRound={deleteRound}
           loading={loading}
           goHome={() => setScreen("home")}
