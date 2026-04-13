@@ -983,12 +983,14 @@ export const styles = {
   },
 
   screenStepPill: {
+    border: "1px solid #d1d5db",
     padding: "6px 10px",
     borderRadius: "999px",
     background: "#f3f4f6",
     color: "#4b5563",
     fontSize: "12px",
     fontWeight: 700,
+    cursor: "pointer",
   },
 
   screenStepPillActive: {

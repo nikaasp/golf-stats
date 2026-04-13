@@ -83,15 +83,17 @@ export default function SummaryScreen({
           </p>
           <div style={styles.screenStepPills}>
             {pages.map((label, index) => (
-              <div
+              <button
                 key={label}
+                type="button"
+                onClick={() => setPage(index)}
                 style={{
                   ...styles.screenStepPill,
                   ...(page === index ? styles.screenStepPillActive : {}),
                 }}
               >
                 {label}
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -193,30 +195,13 @@ export default function SummaryScreen({
       </div>
 
       <div style={styles.fixedBottomSection}>
-        <div style={styles.bottomNavRowThree}>
-          <button
-            style={styles.secondaryButton}
-            onClick={() => setPage((prev) => Math.max(0, prev - 1))}
-            disabled={page === 0}
-          >
-            Back
-          </button>
-
+        <div style={styles.bottomNavRow}>
           <button style={styles.secondaryButton} onClick={goHomeAndReset}>
             Home
           </button>
 
-          <button
-            style={styles.primaryButton}
-            onClick={() => {
-              if (page < pages.length - 1) {
-                setPage((prev) => prev + 1)
-              } else {
-                goHomeAndReset()
-              }
-            }}
-          >
-            {page < pages.length - 1 ? "Next" : "Done"}
+          <button style={styles.primaryButton} onClick={goHomeAndReset}>
+            Done
           </button>
         </div>
       </div>
