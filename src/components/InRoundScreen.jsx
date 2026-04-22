@@ -1,3 +1,4 @@
+import { useState } from "react"
 import ShotCard from "./ShotCard"
 
 const PAR_OPTIONS = [3, 4, 5]
@@ -17,15 +18,18 @@ export default function InRoundScreen({
   addShotCard,
   shotTotals,
   loading,
-  onSaveHole,
-  onSkipHole,
+  onPrevHole,
+  onNextHole,
   onEndRound,
   holeLength,
 }) {
+  const [setupResetKey, setSetupResetKey] = useState(0)
   const activeShot = shots?.[activeShotIndex] || null
   const isFirstShot = activeShotIndex <= 0
   const isLastShot = activeShotIndex >= (shots?.length || 1) - 1
   const teeToFlag = Number(holeLength) > 0 ? `${Number(holeLength)} m` : "-"
+
+  const resetShotSetupTab = () => setSetupResetKey((prev) => prev + 1)
 
   return (
     <div style={styles.screenContainer}>
@@ -63,6 +67,7 @@ export default function InRoundScreen({
           <div style={styles.inRoundShotCardWrap}>
             {activeShot && (
               <ShotCard
+                key={`${hole}-${activeShotIndex}-${setupResetKey}`}
                 shot={activeShot}
                 index={activeShotIndex}
                 shotCount={shots?.length || 1}
@@ -100,7 +105,10 @@ export default function InRoundScreen({
           <button
             type="button"
             style={styles.lightBlueNavButton}
-            onClick={() => setActiveShotIndex((prev) => Math.max(0, prev - 1))}
+            onClick={() => {
+              setActiveShotIndex((prev) => Math.max(0, prev - 1))
+              resetShotSetupTab()
+            }}
             disabled={isFirstShot || loading}
           >
             Prev Shot
@@ -115,10 +123,11 @@ export default function InRoundScreen({
               } else {
                 setActiveShotIndex((prev) => prev + 1)
               }
+              resetShotSetupTab()
             }}
             disabled={loading}
           >
-            {isLastShot ? "Add Shot" : "Next Shot"}
+            Next Shot
           </button>
         </div>
 
@@ -126,19 +135,25 @@ export default function InRoundScreen({
           <button
             type="button"
             style={styles.secondaryButtonCompact}
-            onClick={onSkipHole}
-            disabled={loading}
+            onClick={() => {
+              resetShotSetupTab()
+              onPrevHole()
+            }}
+            disabled={loading || hole <= 1}
           >
-            Skip Hole
+            Prev Hole
           </button>
 
           <button
             type="button"
             style={styles.darkBlueNavButton}
-            onClick={onSaveHole}
+            onClick={() => {
+              resetShotSetupTab()
+              onNextHole()
+            }}
             disabled={loading}
           >
-            {hole >= 18 ? "Save Round" : "Save Hole"}
+            {hole >= 18 ? "Save Round" : "Next Hole"}
           </button>
         </div>
 

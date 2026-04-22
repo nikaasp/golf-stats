@@ -45,8 +45,8 @@ import {
 } from "./services/roundsService"
 import { fetchShotsForRoundIds } from "./services/analyticsService"
 
-import { insertHole, insertSkippedHole } from "./services/holesService"
-import { insertShots } from "./services/shotsService"
+import { deleteHoleByRoundAndNumber, insertHole } from "./services/holesService"
+import { deleteShotsByRoundAndHole, insertShots } from "./services/shotsService"
 import {
   hydrateRoundsWithStoredTags,
   setStoredRoundTags,
@@ -247,6 +247,13 @@ function App() {
     setScreen("review")
   }
 
+  async function openRoundsScreen() {
+    setScreen("rounds")
+    setLoading(true)
+    await Promise.all([loadRounds(), loadCourses()])
+    setLoading(false)
+  }
+
   function buildCurrentHoleCourseData(baseData = newCoursePars) {
     const parValue = par === "" ? null : parseInt(par, 10)
     if (parValue === null || Number.isNaN(parValue)) return baseData
@@ -373,6 +380,26 @@ function App() {
     }
 
     setShots([firstShot])
+    setActiveShotIndex(0)
+  }
+
+  function setShotInputsFromSavedShots(savedShots = []) {
+    const restoredShots = [...savedShots]
+      .sort((a, b) => Number(a.shot_number) - Number(b.shot_number))
+      .map((shot, index) => ({
+        ...makeShot(index + 1),
+        shot_number: index + 1,
+        lie: shot.lie || getDefaultLieForShot(index + 1),
+        distance_to_flag:
+          shot.distance_to_flag === null || shot.distance_to_flag === undefined
+            ? ""
+            : String(shot.distance_to_flag),
+        miss_pattern: shot.miss_pattern || null,
+        strike_quality: shot.strike_quality || null,
+        auto_penalty: Number(shot.auto_penalty || 0),
+      }))
+
+    setShots(restoredShots.length > 0 ? restoredShots : [makeShot(1)])
     setActiveShotIndex(0)
   }
 
@@ -540,6 +567,20 @@ function App() {
 
     setLoading(true)
 
+    const deleteExistingShots = await deleteShotsByRoundAndHole(roundId, hole)
+    if (deleteExistingShots.error) {
+      setLoading(false)
+      alert("Error replacing saved shots: " + deleteExistingShots.error.message)
+      return false
+    }
+
+    const deleteExistingHole = await deleteHoleByRoundAndNumber(roundId, hole)
+    if (deleteExistingHole.error) {
+      setLoading(false)
+      alert("Error replacing saved hole: " + deleteExistingHole.error.message)
+      return false
+    }
+
     const { data, error } = await insertHole({
       user_id: session.user.id,
       round_id: roundId,
@@ -591,7 +632,7 @@ function App() {
     return true
   }
 
-  async function saveHole() {
+  async function goNextHole() {
     const ok = await saveShotByShotHole()
 
     if (!ok) return
@@ -606,51 +647,53 @@ function App() {
 
     setNewCoursePars(finalPars)
     setHole(hole + 1)
-    setPar(isNewCourse ? "" : getSavedCoursePar(selectedCourseData, hole + 1))
-    resetShotInputs(getSavedCourseLength(selectedCourseData, hole + 1))
+    await loadHoleForEditing(hole + 1, finalPars)
   }
 
-  async function skipHole() {
-    if (!roundId) {
-      alert("Please start a round first")
-      return
-    }
-
-    const confirmed = window.confirm(`Skip hole ${hole}?`)
-    if (!confirmed) return
+  async function loadHoleForEditing(targetHole, fallbackCoursePars = newCoursePars) {
+    if (!roundId) return
 
     setLoading(true)
-
-    const { error } = await insertSkippedHole({
-      user_id: session.user.id,
-      round_id: roundId,
-      hole_number: hole,
-      par: null,
-      entry_mode: "skipped",
-      score: null,
-      putts: null,
-      fairway: null,
-      gir: null,
-      penalty: 0,
-      skipped: true,
-    })
-
+    const bundle = await fetchRoundBundle(roundId)
     setLoading(false)
 
-    if (error) {
-      alert("Error skipping hole: " + error.message)
+    if (bundle.holesRes.error) {
+      alert("Could not load saved hole: " + bundle.holesRes.error.message)
+      return
+    }
+    if (bundle.shotsRes.error) {
+      alert("Could not load saved shots: " + bundle.shotsRes.error.message)
       return
     }
 
-    if (hole >= 18) {
-      resetHoleInputs()
-      await finishRound()
+    const savedHole = (bundle.holesRes.data || []).find(
+      (item) => Number(item.hole_number) === Number(targetHole)
+    )
+
+    const savedShots = (bundle.shotsRes.data || []).filter(
+      (item) => Number(item.hole_number) === Number(targetHole)
+    )
+
+    if (savedHole) {
+      setPar(savedHole.par == null ? "" : String(savedHole.par))
+      setShotInputsFromSavedShots(savedShots)
       return
     }
 
-    setHole(hole + 1)
-    setPar(isNewCourse ? "" : getSavedCoursePar(selectedCourseData, hole + 1))
-    resetShotInputs(getSavedCourseLength(selectedCourseData, hole + 1))
+    const courseDataForHole = selectedCourseData?.hole_pars?.length
+      ? selectedCourseData
+      : { hole_pars: fallbackCoursePars }
+
+    setPar(isNewCourse ? "" : getSavedCoursePar(courseDataForHole, targetHole))
+    resetShotInputs(getSavedCourseLength(courseDataForHole, targetHole))
+  }
+
+  async function goPrevHole() {
+    if (hole <= 1) return
+
+    const previousHole = hole - 1
+    setHole(previousHole)
+    await loadHoleForEditing(previousHole)
   }
 
   function currentHoleHasData() {
@@ -800,7 +843,7 @@ function App() {
           styles={styles}
           homeTrendData={homeTrendData}
           goToPlayRound={() => setScreen("playRound")}
-          goToRounds={() => setScreen("rounds")}
+          goToRounds={openRoundsScreen}
           goToAnalytics={() => setScreen("analytics")}
         />
       </div>
@@ -850,8 +893,8 @@ function App() {
           addShotCard={addShotCard}
           shotTotals={shotTotals}
           loading={loading}
-          onSaveHole={saveHole}
-          onSkipHole={skipHole}
+          onPrevHole={goPrevHole}
+          onNextHole={goNextHole}
           onEndRound={endRoundNow}
           holeLength={currentHoleLength}
         />
@@ -908,6 +951,7 @@ function App() {
       <div className="app-shell">
         <ReviewRoundScreen
           selectedReviewRound={selectedReviewRound}
+          selectedReviewHoles={selectedReviewHoles}
           selectedReviewShots={selectedReviewShots}
           reviewSummary={reviewSummary}
           updateRoundTags={updateRoundTags}

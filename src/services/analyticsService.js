@@ -20,7 +20,7 @@ export async function fetchShotsForRoundIds(roundIds) {
 
   return supabase
     .from("shots")
-    .select("round_id, sg_category, strokes_gained, miss_pattern")
+    .select("round_id, hole_number, shot_number, lie, distance_to_flag, sg_category, strokes_gained, miss_pattern")
     .in("round_id", roundIds)
 }
 

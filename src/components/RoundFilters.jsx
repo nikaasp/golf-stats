@@ -13,7 +13,13 @@ export default function RoundFilters({
   loading = false,
 }) {
   return (
-    <div style={styles.analyticsFilterCard}>
+    <form
+      style={styles.analyticsFilterCard}
+      onSubmit={(event) => {
+        event.preventDefault()
+        onApply()
+      }}
+    >
       <div style={styles.analyticsFilterGrid}>
         <div>
           <label style={styles.label}>Start date</label>
@@ -59,9 +65,9 @@ export default function RoundFilters({
         placeholder="rain, windy, tournament"
       />
 
-      <button style={styles.primaryButton} onClick={onApply} disabled={loading}>
+      <button style={styles.primaryButton} type="submit" disabled={loading}>
         {loading ? "Loading..." : "Apply Filter"}
       </button>
-    </div>
+    </form>
   )
 }

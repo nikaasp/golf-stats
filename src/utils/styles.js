@@ -547,8 +547,8 @@ export const styles = {
   statsGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(2, 1fr)",
-    gap: "10px",
-    marginTop: "14px",
+    gap: "8px",
+    marginTop: "8px",
   },
 
   statCard: {
@@ -973,7 +973,7 @@ export const styles = {
 
   sectionCardCompact: {
     background: "white",
-    padding: "10px",
+    padding: "9px",
     borderRadius: "14px",
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
     overflow: "hidden",
@@ -986,6 +986,76 @@ export const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "6px",
+  },
+
+  filterStatusText: {
+    marginTop: "8px",
+    marginBottom: 0,
+    color: "#4b5563",
+    fontSize: "12px",
+    lineHeight: 1.3,
+    fontWeight: 600,
+  },
+
+  puttingStatsGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
+  },
+
+  compactMetricCard: {
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "8px",
+  },
+
+  compactMetricValue: {
+    fontSize: "18px",
+    fontWeight: 800,
+    lineHeight: 1.1,
+  },
+
+  compactMetricLabel: {
+    marginTop: "5px",
+    fontSize: "11px",
+    color: "#6b7280",
+    lineHeight: 1.2,
+    fontWeight: 700,
+  },
+
+  barChartRows: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "9px",
+    marginTop: "10px",
+  },
+
+  barChartRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+
+  barChartLabel: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "8px",
+    fontSize: "12px",
+    color: "#374151",
+    lineHeight: 1.2,
+  },
+
+  barChartTrack: {
+    height: "11px",
+    borderRadius: "999px",
+    background: "#e5e7eb",
+    overflow: "hidden",
+  },
+
+  barChartFill: {
+    height: "100%",
+    borderRadius: "999px",
   },
 
   analyticsFilterGrid: {
@@ -1003,18 +1073,18 @@ export const styles = {
 
   screenStepPills: {
     display: "flex",
-    gap: "6px",
+    gap: "5px",
     flexWrap: "wrap",
-    marginTop: "10px",
+    marginTop: "8px",
   },
 
   screenStepPill: {
     border: "1px solid #d1d5db",
-    padding: "6px 10px",
+    padding: "5px 8px",
     borderRadius: "999px",
     background: "#f3f4f6",
     color: "#4b5563",
-    fontSize: "12px",
+    fontSize: "11px",
     fontWeight: 700,
     cursor: "pointer",
   },
@@ -1068,7 +1138,7 @@ export const styles = {
 
     chartCardCompact: {
     background: "white",
-    padding: "10px",
+    padding: "9px",
     borderRadius: "16px",
     boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
     overflow: "hidden",

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Golf Stats - iPhone 15 Pro Preview</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        background: #111827;
+        color: #e5e7eb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+      }
+
+      main {
+        display: grid;
+        gap: 14px;
+        justify-items: center;
+      }
+
+      .toolbar {
+        width: min(100%, 393px);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 13px;
+        color: #cbd5e1;
+      }
+
+      .toolbar strong {
+        color: #f9fafb;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .toolbar a {
+        color: #93c5fd;
+        text-decoration: none;
+      }
+
+      .toolbar a:hover {
+        text-decoration: underline;
+      }
+
+      .phone {
+        width: 393px;
+        height: 852px;
+        overflow: hidden;
+        border: 12px solid #020617;
+        border-radius: 46px;
+        background: #f8fafc;
+        box-shadow:
+          0 22px 70px rgb(0 0 0 / 0.45),
+          0 0 0 1px rgb(255 255 255 / 0.08);
+      }
+
+      iframe {
+        width: 100%;
+        height: 100%;
+        display: block;
+        border: 0;
+        background: white;
+      }
+
+      @media (max-height: 930px) {
+        .phone {
+          transform: scale(calc((100vh - 78px) / 852));
+          transform-origin: top center;
+        }
+
+        main {
+          min-height: calc(100vh - 48px);
+          align-content: start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="toolbar">
+        <strong>iPhone 15 Pro</strong>
+        <span>393 x 852 CSS px</span>
+        <a href="/" target="_blank" rel="noreferrer">Open full size</a>
+      </div>
+      <div class="phone">
+        <iframe src="/" title="Golf Stats app preview"></iframe>
+      </div>
+    </main>
+  </body>
+</html>

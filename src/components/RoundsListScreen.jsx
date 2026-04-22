@@ -29,6 +29,7 @@ export default function RoundsListScreen({
     courseId: "all",
     tagFilter: "",
   })
+  const [filterStatus, setFilterStatus] = useState("")
 
   const applyFilters = () => {
     setAppliedFilters({
@@ -37,6 +38,7 @@ export default function RoundsListScreen({
       courseId: draftCourseId,
       tagFilter: draftTagFilter,
     })
+    setFilterStatus("Filters applied")
     setIndex(0)
   }
 
@@ -85,13 +87,25 @@ export default function RoundsListScreen({
             onApply={applyFilters}
             loading={loading}
           />
+
+          <p style={styles.filterStatusText}>
+            {filterStatus
+              ? `${filterStatus}. Showing ${filteredRounds.length} of ${reviewRounds.length} rounds.`
+              : `Showing ${filteredRounds.length} of ${reviewRounds.length} rounds.`}
+          </p>
         </div>
       </div>
 
       <div style={styles.fixedMainSectionCentered}>
         {!round ? (
           <div style={styles.sectionCardCompact}>
-            <p style={styles.mutedText}>No saved rounds match this filter.</p>
+            <p style={styles.mutedText}>
+              {loading
+                ? "Loading saved rounds..."
+                : reviewRounds.length
+                ? "No saved rounds match this filter."
+                : "No saved rounds have been loaded yet."}
+            </p>
           </div>
         ) : (
           <div style={styles.sectionCardCompact}>

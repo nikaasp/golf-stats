@@ -255,3 +255,93 @@ export function buildMissPatternByCategoryFromShots(shots = []) {
 
   return grouped
 }
+
+export function buildFirstPuttDistanceTimeline(rounds = [], shots = []) {
+  const shotsByRoundAndHole = {}
+
+  for (const shot of shots) {
+    if (!shotsByRoundAndHole[shot.round_id]) shotsByRoundAndHole[shot.round_id] = {}
+    if (!shotsByRoundAndHole[shot.round_id][shot.hole_number]) {
+      shotsByRoundAndHole[shot.round_id][shot.hole_number] = []
+    }
+    shotsByRoundAndHole[shot.round_id][shot.hole_number].push(shot)
+  }
+
+  return sortRoundsChronologically(rounds).map((round) => {
+    const holeGroups = shotsByRoundAndHole[round.id] || {}
+    const firstPuttDistances = Object.values(holeGroups)
+      .map((holeShots) => {
+        const firstPutt = [...holeShots]
+          .sort((a, b) => Number(a.shot_number) - Number(b.shot_number))
+          .find((shot) => shot.lie === "Green")
+
+        const distance = Number(firstPutt?.distance_to_flag)
+        return Number.isFinite(distance) ? distance : null
+      })
+      .filter((distance) => distance !== null)
+
+    const avgFirstPuttDistance =
+      firstPuttDistances.length > 0
+        ? firstPuttDistances.reduce((sum, value) => sum + value, 0) /
+          firstPuttDistances.length
+        : null
+
+    return {
+      round_id: round.id,
+      date: round.date,
+      course: round.course,
+      avgFirstPuttDistance,
+      firstPuttHoleCount: firstPuttDistances.length,
+    }
+  })
+}
+
+export function buildRoundHoleStats(holes = [], shots = []) {
+  const shotsByHole = {}
+
+  for (const shot of shots) {
+    if (!shotsByHole[shot.hole_number]) shotsByHole[shot.hole_number] = []
+    shotsByHole[shot.hole_number].push(shot)
+  }
+
+  return [...holes]
+    .filter((hole) => !hole.skipped)
+    .sort((a, b) => Number(a.hole_number) - Number(b.hole_number))
+    .map((hole) => {
+      const holeShots = (shotsByHole[hole.hole_number] || []).sort(
+        (a, b) => Number(a.shot_number) - Number(b.shot_number)
+      )
+
+      const totalSg = holeShots.reduce((sum, shot) => {
+        const value = Number(shot.strokes_gained)
+        return Number.isFinite(value) ? sum + value : sum
+      }, 0)
+
+      const firstPutt = holeShots.find((shot) => shot.lie === "Green")
+      const firstPuttDistance = Number(firstPutt?.distance_to_flag)
+      const missCount = holeShots.filter((shot) => shot.miss_pattern).length
+
+      return {
+        hole: Number(hole.hole_number),
+        score: Number.isFinite(Number(hole.score)) ? Number(hole.score) : null,
+        par: Number.isFinite(Number(hole.par)) ? Number(hole.par) : null,
+        toPar:
+          Number.isFinite(Number(hole.score)) && Number.isFinite(Number(hole.par))
+            ? Number(hole.score) - Number(hole.par)
+            : null,
+        totalSg: Number(totalSg.toFixed(3)),
+        putts: Number.isFinite(Number(hole.putts)) ? Number(hole.putts) : null,
+        firstPuttDistance: Number.isFinite(firstPuttDistance)
+          ? firstPuttDistance
+          : null,
+        fairway:
+          Number(hole.par) > 3 && hole.fairway !== null
+            ? hole.fairway === true
+              ? 1
+              : 0
+            : null,
+        gir: hole.gir !== null ? (hole.gir === true ? 1 : 0) : null,
+        missCount,
+      }
+    })
+}

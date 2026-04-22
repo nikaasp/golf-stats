@@ -31,9 +31,18 @@ VITE_SUPABASE_ANON_KEY=...
 npm run dev
 ```
 
+For a live iPhone 15 Pro sized preview during development, run:
+
+```bash
+npm run dev:mobile
+```
+
+Then open `http://localhost:5173/dev-mobile-preview.html`. The preview frames the app at `393 x 852` CSS pixels while keeping Vite hot reload active.
+
 ## Scripts
 
 - `npm run dev` starts the Vite dev server.
+- `npm run dev:mobile` starts the Vite dev server on a stable port for the iPhone 15 Pro preview.
 - `npm run build` creates a production build.
 - `npm run lint` runs ESLint.
 - `npm run test` runs the utility test suite with Node's built-in test runner.
