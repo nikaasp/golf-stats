@@ -6,8 +6,15 @@ export default function DistancePicker({ value, onChange, styles }) {
     onChange(next)
   }
 
-  const handleClear = () => onChange("")
-  const handleBack = () => onChange(safeValue.slice(0, -1))
+  const handleComma = () => {
+    if (safeValue.includes(".")) return
+    onChange(safeValue ? `${safeValue}.` : "0.")
+  }
+
+  const handleBack = () => {
+    const next = safeValue.slice(0, -1)
+    onChange(next === "0" ? "" : next)
+  }
 
   return (
     <div style={styles.distanceWrapMini}>
@@ -31,9 +38,9 @@ export default function DistancePicker({ value, onChange, styles }) {
         <button
           type="button"
           style={styles.keypadButtonMiniSecondary}
-          onClick={handleClear}
+          onClick={handleComma}
         >
-          C
+          ,
         </button>
 
         <button

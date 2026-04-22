@@ -11,7 +11,7 @@ function scoreStyle(score, par, styles) {
   return styles.scoreDouble
 }
 
-export default function Scorecard({ holes = [], styles }) {
+export default function Scorecard({ holes = [], styles, onHoleSelect = null }) {
   const [nine, setNine] = useState("front")
 
   const front = useMemo(
@@ -65,7 +65,16 @@ export default function Scorecard({ holes = [], styles }) {
 
       <div style={styles.scorecardCompactGrid}>
         {list.map((h) => (
-          <div key={h.id} style={styles.scoreCellCompact}>
+          <button
+            key={h.id}
+            type="button"
+            style={{
+              ...styles.scoreCellCompact,
+              ...(onHoleSelect ? styles.scoreCellButtonCompact : {}),
+            }}
+            onClick={() => onHoleSelect?.(h)}
+            disabled={!onHoleSelect}
+          >
             <div style={styles.scoreHoleNoCompact}>H{h.hole_number}</div>
 
             <div style={{ ...styles.scoreBadgeCompact, ...scoreStyle(h.score, h.par, styles) }}>
@@ -74,7 +83,7 @@ export default function Scorecard({ holes = [], styles }) {
 
             <div style={styles.scoreParCompact}>P{h.par ?? "-"}</div>
             <div style={styles.scoreSymbolCompact}>{scoreLabel(h.score, h.par)}</div>
-          </div>
+          </button>
         ))}
       </div>
 

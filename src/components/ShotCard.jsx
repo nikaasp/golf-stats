@@ -15,7 +15,6 @@ const MISS_BUTTONS = [
   { value: "long", label: "Long", area: "topCenter" },
   { value: "long_right", label: "Long Right", area: "topRight" },
   { value: "left", label: "Left", area: "midLeft" },
-  { value: "spot_on", label: "On Line", area: "center" },
   { value: "right", label: "Right", area: "midRight" },
   { value: "short_left", label: "Short Left", area: "bottomLeft" },
   { value: "short", label: "Short", area: "bottomCenter" },
@@ -185,19 +184,21 @@ export default function ShotCard({
           </div>
 
           <div style={styles.shotSectionCompact}>
-            <div style={styles.shotSectionHeaderCompact}>
-              <label style={styles.labelCompact}>Distance to Flag</label>
-              {showHoleLengthHint && (
-                <span style={styles.inlineHintBadgeCompact}>Auto from hole length</span>
-              )}
-            </div>
+            <div style={styles.distanceSectionGridCompact}>
+              <div style={styles.shotSectionHeaderCompact}>
+                <label style={styles.labelCompact}>Distance to Flag</label>
+                {showHoleLengthHint && (
+                  <span style={styles.inlineHintBadgeCompact}>Autofilled distance</span>
+                )}
+              </div>
 
-            <div style={styles.distanceBlockCompact}>
-              <DistancePicker
-                value={shot.distance_to_flag}
-                onChange={(value) => handleFieldChange("distance_to_flag", value)}
-                styles={styles}
-              />
+              <div style={styles.distanceBlockCompact}>
+                <DistancePicker
+                  value={shot.distance_to_flag}
+                  onChange={(value) => handleFieldChange("distance_to_flag", value)}
+                  styles={styles}
+                />
+              </div>
             </div>
           </div>
         </>

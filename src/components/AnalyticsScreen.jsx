@@ -5,6 +5,7 @@ import PuttsLineChart from "./PuttsLineChart"
 import FirstPuttDistanceLineChart from "./FirstPuttDistanceLineChart"
 import MissPatternBarChart from "./MissPatternBarChart"
 import RoundFilters from "./RoundFilters"
+import TrendMetricLineChart from "./TrendMetricLineChart"
 import {
   fetchRoundsForAnalytics,
   fetchShotsForRoundIds,
@@ -14,6 +15,8 @@ import {
   buildSgTimeline,
   buildAccuracyTimeline,
   buildPuttsTimeline,
+  buildScoringTimeline,
+  buildApproachProximityBandSummary,
   buildFirstPuttDistanceTimeline,
   buildMissPatternByCategoryFromShots,
 } from "../utils/analyticsTransforms"
@@ -41,7 +44,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
 
   const [page, setPage] = useState(0)
   const [missChartIndex, setMissChartIndex] = useState(0)
-  const pages = ["Filter", "SG", "Accuracy", "Putts", "1st Putt", "Misses"]
+  const pages = ["Filter", "SG", "Accuracy", "Putting", "Mistakes", "Approach", "Misses"]
 
   const [draftStartDate, setDraftStartDate] = useState("")
   const [draftEndDate, setDraftEndDate] = useState(today)
@@ -80,7 +83,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
 
     if (roundsRes.error) {
       setLoading(false)
-      alert("Could not load analytics rounds: " + roundsRes.error.message)
+      alert("Could not load trend rounds: " + roundsRes.error.message)
       return
     }
 
@@ -101,12 +104,12 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
     setLoading(false)
 
     if (shotsRes.error) {
-      alert("Could not load analytics shots: " + shotsRes.error.message)
+      alert("Could not load trend shots: " + shotsRes.error.message)
       return
     }
 
     if (holesRes.error) {
-      alert("Could not load analytics holes: " + holesRes.error.message)
+      alert("Could not load trend holes: " + holesRes.error.message)
       return
     }
 
@@ -140,6 +143,16 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
   const firstPuttDistanceTimeline = useMemo(
     () => buildFirstPuttDistanceTimeline(rounds, shots),
     [rounds, shots]
+  )
+
+  const scoringTimeline = useMemo(
+    () => buildScoringTimeline(rounds, holes),
+    [rounds, holes]
+  )
+
+  const approachBandSummary = useMemo(
+    () => buildApproachProximityBandSummary(shots),
+    [shots]
   )
 
   const avgPuttsAcrossRounds = useMemo(() => {
@@ -205,7 +218,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
     <div style={styles.fixedScreen}>
       <div style={styles.fixedTopSection}>
         <div style={styles.sectionCardCompact}>
-          <h1 style={styles.pageTitle}>Analytics</h1>
+          <h1 style={styles.pageTitle}>Trends</h1>
 
           <div style={styles.screenStepPills}>
             {pages.map((label, index) => (
@@ -243,7 +256,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
               loading={loading}
             />
             <p style={styles.filterStatusText}>
-              {loading ? "Loading analytics..." : `Showing ${rounds.length} rounds.`}
+              {loading ? "Loading trends..." : `Showing ${rounds.length} rounds.`}
             </p>
           </div>
         )}
@@ -274,6 +287,33 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
 
         {page === 4 && (
           <div style={styles.fixedChartGrid}>
+            <TrendMetricLineChart
+              title="Penalties per Round"
+              data={scoringTimeline}
+              styles={styles}
+              series={[
+                { key: "penaltyStrokes", name: "Penalty strokes", color: "#dc2626" },
+                { key: "penaltyHoles", name: "Penalty holes", color: "#f97316" },
+              ]}
+            />
+            <TrendMetricLineChart
+              title="Scrambling and Putting Rates"
+              data={scoringTimeline}
+              styles={styles}
+              yDomain={[0, 100]}
+              valueSuffix="%"
+              series={[
+                { key: "scramblePct", name: "Scramble %", color: "#16a34a" },
+                { key: "upDownPct", name: "Up/down %", color: "#2563eb" },
+                { key: "threePuttPct", name: "3-putt %", color: "#dc2626" },
+                { key: "onePuttPct", name: "1-putt %", color: "#0f766e" },
+              ]}
+            />
+          </div>
+        )}
+
+        {page === 5 && (
+          <div style={styles.fixedChartGrid}>
             <div style={styles.puttingStatsGrid}>
               <div style={styles.compactMetricCard}>
                 <div style={styles.compactMetricValue}>
@@ -292,10 +332,27 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
               data={firstPuttDistanceTimeline}
               styles={styles}
             />
+            <div style={styles.sectionCardCompact}>
+              <h2 style={styles.sectionTitle}>Approach Proximity Bands</h2>
+              <div style={styles.statsGrid}>
+                {approachBandSummary.map((band) => (
+                  <div key={band.band} style={styles.compactMetricCard}>
+                    <div style={styles.compactMetricValue}>
+                      {band.avgProximity == null
+                        ? "-"
+                        : `${Number(band.avgProximity).toFixed(1)} m`}
+                    </div>
+                    <div style={styles.compactMetricLabel}>
+                      {band.band} m ({band.count})
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
-        {page === 5 && (
+        {page === 6 && (
           <div style={styles.sectionCardCompact}>
             {missPatternCharts.length === 0 ? (
               <p style={styles.mutedText}>No miss pattern data available.</p>

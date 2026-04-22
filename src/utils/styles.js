@@ -964,11 +964,22 @@ export const styles = {
     justifyContent: "center",
   },
 
+  fixedMainSectionScrollable: {
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    paddingRight: "2px",
+  },
+
   fixedBottomSection: {
     minHeight: 0,
     display: "flex",
     flexDirection: "column",
     gap: "8px",
+    paddingBottom: "10px",
   },
 
   sectionCardCompact: {
@@ -1056,6 +1067,56 @@ export const styles = {
   barChartFill: {
     height: "100%",
     borderRadius: "999px",
+  },
+
+  analyticsTable: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    marginTop: "10px",
+  },
+
+  analyticsTableRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr repeat(4, auto)",
+    gap: "6px",
+    alignItems: "center",
+    background: "#f9fafb",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "8px",
+    fontSize: "11px",
+    lineHeight: 1.2,
+  },
+
+  analyticsFilterSummaryCard: {
+    marginTop: "8px",
+    background: "#eef6ee",
+    border: "1px solid #d7e7d7",
+    borderRadius: "12px",
+    padding: "6px 8px",
+    minHeight: 0,
+  },
+
+  analyticsFilterSummary: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "4px",
+    marginTop: "5px",
+    maxHeight: "54px",
+    overflow: "hidden",
+  },
+
+  analyticsFilterSummaryChip: {
+    border: "1px solid #d7e7d7",
+    borderRadius: "999px",
+    background: "#ffffff",
+    color: "#1f2937",
+    fontSize: "10px",
+    fontWeight: 700,
+    lineHeight: 1.1,
+    padding: "4px 7px",
+    whiteSpace: "nowrap",
   },
 
   analyticsFilterGrid: {
@@ -1229,6 +1290,11 @@ export const styles = {
     minWidth: 0,
   },
 
+  scoreCellButtonCompact: {
+    width: "100%",
+    cursor: "pointer",
+  },
+
   scoreHoleNoCompact: {
     fontSize: "11px",
     color: "#6b7280",
@@ -1330,6 +1396,132 @@ export const styles = {
     border: "1px solid #e5e7eb",
     borderRadius: "16px",
     padding: "14px",
+  },
+
+  courseList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+
+  myCoursesMain: {
+    minHeight: 0,
+    display: "grid",
+    gridTemplateRows: "112px minmax(0, 1fr)",
+    gap: "8px",
+    overflow: "hidden",
+  },
+
+  courseListPane: {
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    paddingRight: "2px",
+  },
+
+  courseListPaneFull: {
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    paddingRight: "2px",
+  },
+
+  courseDetailPane: {
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    paddingRight: "2px",
+  },
+
+  courseEditorHeader: {
+    background: "#eef6ee",
+    border: "1px solid #d7e7d7",
+  },
+
+  courseListButton: {
+    width: "100%",
+    border: "1px solid #e5e7eb",
+    borderRadius: "14px",
+    background: "#f9fafb",
+    padding: "10px 12px",
+    textAlign: "left",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+
+  courseListButtonActive: {
+    background: "#eef6ee",
+    border: "1px solid #3c523c",
+  },
+
+  courseListName: {
+    fontSize: "15px",
+    fontWeight: 800,
+    color: "#111827",
+  },
+
+  courseListMeta: {
+    fontSize: "11px",
+    fontWeight: 700,
+    color: "#6b7280",
+    lineHeight: 1.2,
+  },
+
+  courseMetaGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
+    marginTop: "10px",
+  },
+
+  courseHoleList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+
+  courseHoleRow: {
+    background: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "8px",
+    display: "grid",
+    gridTemplateColumns: "56px 1fr 72px",
+    gap: "8px",
+    alignItems: "end",
+  },
+
+  courseHoleNumber: {
+    fontSize: "12px",
+    fontWeight: 800,
+    color: "#111827",
+    paddingBottom: "10px",
+    whiteSpace: "nowrap",
+  },
+
+  courseHoleField: {
+    minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+
+  courseHoleLabel: {
+    fontSize: "10px",
+    fontWeight: 700,
+    color: "#6b7280",
+    lineHeight: 1.1,
   },
 
   statCardCompact: {
@@ -1483,6 +1675,7 @@ export const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "6px",
+    paddingBottom: "10px",
   },
 
   inRoundShotNavRowCompact: {
@@ -1597,9 +1790,16 @@ export const styles = {
 
   shotSectionHeaderCompact: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "8px",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "4px",
+  },
+
+  distanceSectionGridCompact: {
+    display: "grid",
+    gridTemplateColumns: "minmax(40px, 1fr) 335px",
+    gap: "6px",
+    alignItems: "start",
   },
 
   shotTypeCompact: {
@@ -1645,25 +1845,25 @@ export const styles = {
 
   resultCockpit: {
     display: "grid",
-    gridTemplateColumns: "60px 1fr 60px",
-    gridTemplateRows: "34px auto 34px",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gridTemplateRows: "44px 44px 44px",
     gridTemplateAreas: `
       "topLeft topCenter topRight"
       "midLeft center midRight"
       "bottomLeft bottomCenter bottomRight"
     `,
-    gap: "5px",
+    gap: "8px",
     alignItems: "center",
   },
 
   resultArrowButton: {
-    minHeight: "34px",
-    minWidth: "60px",
-    borderRadius: "10px",
+    minHeight: "44px",
+    minWidth: 0,
+    borderRadius: "12px",
     border: "1px solid #cbd5e1",
     background: "#ffffff",
     color: "#374151",
-    fontSize: "10px",
+    fontSize: "12px",
     fontWeight: 700,
     cursor: "pointer",
     padding: 0,
@@ -1682,8 +1882,8 @@ export const styles = {
 
   resultArrowButtonText: {
     display: "block",
-    fontSize: "9px",
-    lineHeight: 1.05,
+    fontSize: "11px",
+    lineHeight: 1.1,
     textAlign: "center",
   },
 
@@ -1695,14 +1895,15 @@ export const styles = {
   },
 
   strikeRowCompact: {
-    display: "flex",
-    gap: "5px",
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "8px",
   },
 
   strikeButtonCompact: {
-    minWidth: "44px",
-    height: "30px",
-    borderRadius: "10px",
+    minWidth: 0,
+    height: "44px",
+    borderRadius: "12px",
     border: "1px solid #d1d5db",
     background: "#ffffff",
     fontSize: "12px",
@@ -1717,23 +1918,29 @@ export const styles = {
   },
 
   penaltyCheckboxRow: {
-    display: "flex",
-    gap: "10px",
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "8px",
     alignItems: "center",
   },
 
   penaltyCheckboxWrap: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "4px",
-    fontSize: "12px",
+    justifyContent: "center",
+    gap: "8px",
+    minHeight: "44px",
+    border: "1px solid #d1d5db",
+    borderRadius: "12px",
+    background: "#ffffff",
+    fontSize: "14px",
     fontWeight: 700,
     color: "#374151",
   },
 
   penaltyCheckbox: {
-    width: "16px",
-    height: "16px",
+    width: "22px",
+    height: "22px",
     margin: 0,
   },
 
@@ -1745,32 +1952,35 @@ export const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "6px",
+    gap: "5px",
   },
 
   distanceBlockCompact: {
     display: "flex",
-    justifyContent: "center",
+    justifyContent: "flex-end",
+    paddingRight: "2px",
+    minWidth: 0,
+    transform: "translateX(-78px)",
   },
 
   distanceDisplayMini: {
-    minWidth: "78px",
-    minHeight: "30px",
+    minWidth: "150px",
+    minHeight: "38px",
     display: "inline-flex",
     alignItems: "baseline",
     justifyContent: "center",
     gap: "4px",
-    fontSize: "15px",
+    fontSize: "18px",
     fontWeight: 800,
     background: "#eef2ff",
-    padding: "4px 8px",
+    padding: "5px 10px",
     borderRadius: "10px",
     border: "1px solid #c7d2fe",
     color: "#1f2937",
   },
 
   distanceUnitMini: {
-    fontSize: "10px",
+    fontSize: "11px",
     fontWeight: 700,
     color: "#4b5563",
   },
@@ -1778,31 +1988,31 @@ export const styles = {
   keypadMini: {
     display: "grid",
     gridTemplateColumns: "repeat(3, 1fr)",
-    gap: "3px",
+    gap: "5px",
     width: "100%",
-    maxWidth: "120px",
-    margin: "0 auto",
+    maxWidth: "329px",
+    marginLeft: "auto",
   },
 
   keypadButtonMini: {
-    height: "24px",
-    borderRadius: "8px",
+    height: "39px",
+    borderRadius: "10px",
     border: "1px solid #d1d5db",
     background: "#ffffff",
     fontWeight: 800,
-    fontSize: "12px",
+    fontSize: "16px",
     cursor: "pointer",
     padding: 0,
   },
 
   keypadButtonMiniSecondary: {
-    height: "24px",
-    borderRadius: "8px",
+    height: "39px",
+    borderRadius: "10px",
     border: "1px solid #d1d5db",
     background: "#f9fafb",
     color: "#374151",
     fontWeight: 800,
-    fontSize: "11px",
+    fontSize: "15px",
     cursor: "pointer",
     padding: 0,
   },

@@ -177,6 +177,7 @@ export function inferHoleMetrics(hole, holeShots) {
   }
 
   let approachAccuracy = null
+  let firstPuttDistance = null
   if (firstPuttIndex > 0) {
     const approachShot = shots[firstPuttIndex - 1]
     const firstPuttShot = shots[firstPuttIndex]
@@ -184,6 +185,7 @@ export function inferHoleMetrics(hole, holeShots) {
       approachShot?.distance_to_flag != null &&
       firstPuttShot?.distance_to_flag != null
     ) {
+      firstPuttDistance = Number(firstPuttShot.distance_to_flag)
       approachAccuracy = clamp(
         Number(approachShot.distance_to_flag) - Number(firstPuttShot.distance_to_flag),
         0,
@@ -198,6 +200,7 @@ export function inferHoleMetrics(hole, holeShots) {
     putts,
     drivingDistance,
     approachAccuracy,
+    firstPuttDistance,
   }
 }
 
@@ -241,9 +244,24 @@ export function buildRoundAnalytics(holes, shots) {
   let girOpp = 0
   let fwHits = 0
   let fwOpp = 0
+  let penaltyStrokes = 0
+  let penaltyHoles = 0
+  let onePuttHoles = 0
+  let threePuttHoles = 0
+  let scrambleOpp = 0
+  let scrambleSuccess = 0
+  let upDownOpp = 0
+  let upDownSuccess = 0
 
   const driveValues = []
   const approachValues = []
+  const firstPuttOnGirValues = []
+  const approachBandValues = {
+    "50-100": [],
+    "100-150": [],
+    "150-200": [],
+    "200+": [],
+  }
 
   const par3Scores = []
   const par4Scores = []
@@ -260,6 +278,13 @@ export function buildRoundAnalytics(holes, shots) {
     totalPar += hole.par || 0
     totalPutts += inferred.putts || 0
 
+    const holePenalty = Number(hole.penalty || 0)
+    penaltyStrokes += holePenalty
+    if (holePenalty > 0) penaltyHoles += 1
+
+    if (inferred.putts === 1) onePuttHoles += 1
+    if (inferred.putts >= 3) threePuttHoles += 1
+
     if (hole.par === 3) par3Scores.push(hole.score || 0)
     if (hole.par === 4) par4Scores.push(hole.score || 0)
     if (hole.par === 5) par5Scores.push(hole.score || 0)
@@ -274,8 +299,35 @@ export function buildRoundAnalytics(holes, shots) {
       if (inferred.gir) girHits += 1
     }
 
+    if (inferred.gir === false && Number.isFinite(Number(hole.par))) {
+      scrambleOpp += 1
+      upDownOpp += 1
+
+      if (Number(hole.score) <= Number(hole.par)) scrambleSuccess += 1
+      if (Number(inferred.putts) <= 1) upDownSuccess += 1
+    }
+
     if (inferred.drivingDistance !== null) driveValues.push(inferred.drivingDistance)
     if (inferred.approachAccuracy !== null) approachValues.push(inferred.approachAccuracy)
+    if (inferred.gir === true && inferred.firstPuttDistance !== null) {
+      firstPuttOnGirValues.push(inferred.firstPuttDistance)
+    }
+
+    const sortedHoleShots = [...holeShots].sort((a, b) => a.shot_number - b.shot_number)
+    const firstPuttIndex = sortedHoleShots.findIndex((shot) => shot.lie === "Green")
+    if (firstPuttIndex > 0) {
+      const approachShot = sortedHoleShots[firstPuttIndex - 1]
+      const firstPutt = sortedHoleShots[firstPuttIndex]
+      const startDistance = Number(approachShot?.distance_to_flag)
+      const endDistance = Number(firstPutt?.distance_to_flag)
+
+      if (Number.isFinite(startDistance) && Number.isFinite(endDistance)) {
+        if (startDistance >= 50 && startDistance < 100) approachBandValues["50-100"].push(endDistance)
+        if (startDistance >= 100 && startDistance < 150) approachBandValues["100-150"].push(endDistance)
+        if (startDistance >= 150 && startDistance < 200) approachBandValues["150-200"].push(endDistance)
+        if (startDistance >= 200) approachBandValues["200+"].push(endDistance)
+      }
+    }
 
     for (const shot of holeShots) {
       if (shot.miss_pattern && missPatternCounts[shot.miss_pattern] !== undefined) {
@@ -301,11 +353,30 @@ export function buildRoundAnalytics(holes, shots) {
   const avg = (arr) =>
     arr.length > 0 ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : "-"
 
+  const pct = (hits, opps) =>
+    opps > 0 ? ((hits / opps) * 100).toFixed(1) : "0.0"
+
+  const approachProximityBands = Object.fromEntries(
+    Object.entries(approachBandValues).map(([band, values]) => [band, avg(values)])
+  )
+
   return {
     playedCount: perHole.length,
     totalScore,
     totalPar,
     totalPutts,
+    penaltyStrokes,
+    penaltyHoles,
+    onePuttHoles,
+    threePuttHoles,
+    onePuttPct: pct(onePuttHoles, perHole.length),
+    threePuttPct: pct(threePuttHoles, perHole.length),
+    scrambleOpp,
+    scrambleSuccess,
+    scramblePct: pct(scrambleSuccess, scrambleOpp),
+    upDownOpp,
+    upDownSuccess,
+    upDownPct: pct(upDownSuccess, upDownOpp),
     fwHits,
     fwMisses: Math.max(0, fwOpp - fwHits),
     fwOpp,
@@ -319,6 +390,8 @@ export function buildRoundAnalytics(holes, shots) {
     missPatternTotal: Object.values(missPatternCounts).reduce((a, b) => a + b, 0),
     avgDrive: avg(driveValues),
     avgApproach: avg(approachValues),
+    avgFirstPuttOnGir: avg(firstPuttOnGirValues),
+    approachProximityBands,
     avgPar3: avg(par3Scores),
     avgPar4: avg(par4Scores),
     avgPar5: avg(par5Scores),

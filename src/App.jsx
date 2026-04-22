@@ -9,14 +9,19 @@ import SummaryScreen from "./components/SummaryScreen"
 import ReviewRoundScreen from "./components/ReviewRoundScreen"
 import RoundsListScreen from "./components/RoundsListScreen"
 import AnalyticsScreen from "./components/AnalyticsScreen"
+import ShotAnalyticsScreen from "./components/ShotAnalyticsScreen"
 import InRoundScreen from "./components/InRoundScreen"
+import MyCoursesScreen from "./components/MyCoursesScreen"
 
 import {
+  clearRoundCourseByCourseId,
   createCourse,
+  deleteCourseById,
   fetchCourses,
   findCourseByName,
   updateCourseById,
   updateCourseLastPlayed,
+  updateRoundsCourseNameByCourseId,
   updateRoundCourse,
 } from "./services/coursesService"
 
@@ -40,6 +45,7 @@ import { buildSgTimeline } from "./utils/analyticsTransforms"
 import {
   createRound,
   deleteRoundById,
+  deleteRoundsByCourseId,
   fetchRoundBundle,
   fetchRounds,
 } from "./services/roundsService"
@@ -252,6 +258,117 @@ function App() {
     setLoading(true)
     await Promise.all([loadRounds(), loadCourses()])
     setLoading(false)
+  }
+
+  async function openCoursesScreen() {
+    setScreen("courses")
+    setLoading(true)
+    await Promise.all([loadCourses(), loadRounds()])
+    setLoading(false)
+  }
+
+  async function renameCourse(courseToRename, nextName, nextHolePars = null) {
+    const cleaned = String(nextName || "").trim()
+
+    if (!courseToRename?.id) {
+      alert("Could not identify the selected course")
+      return false
+    }
+
+    if (!cleaned) {
+      alert("Please enter a course name")
+      return false
+    }
+
+    const duplicate = courses.find(
+      (courseItem) =>
+        courseItem.id !== courseToRename.id &&
+        courseItem.name?.trim().toLowerCase() === cleaned.toLowerCase()
+    )
+
+    if (duplicate) {
+      alert("A course with this name already exists")
+      return false
+    }
+
+    const updates = { name: cleaned }
+
+    if (Array.isArray(nextHolePars)) {
+      updates.hole_pars = nextHolePars
+    }
+
+    setLoading(true)
+    const courseRes = await updateCourseById(courseToRename.id, updates)
+
+    if (courseRes.error) {
+      setLoading(false)
+      alert("Could not update course: " + courseRes.error.message)
+      return false
+    }
+
+    const roundsRes = await updateRoundsCourseNameByCourseId(courseToRename.id, cleaned)
+    setLoading(false)
+
+    if (roundsRes.error) {
+      alert("Course saved, but saved round names could not be updated: " + roundsRes.error.message)
+    }
+
+    if (selectedCourseId === courseToRename.id) {
+      setCourse(cleaned)
+    }
+
+    await Promise.all([loadCourses(), loadRounds()])
+    return true
+  }
+
+  async function deleteCourse(courseToDelete) {
+    if (!courseToDelete?.id) {
+      alert("Could not identify the selected course")
+      return false
+    }
+
+    const confirmed = window.confirm(
+      `Delete course "${courseToDelete.name}" and all played rounds on this course?`
+    )
+    if (!confirmed) return false
+
+    const typed = window.prompt(
+      `Type DELETE to permanently delete "${courseToDelete.name}" and its played rounds.`
+    )
+    if (typed !== "DELETE") return false
+
+    setLoading(true)
+
+    const roundsDelete = await deleteRoundsByCourseId(courseToDelete.id)
+    if (roundsDelete.error) {
+      setLoading(false)
+      alert("Could not delete played rounds for this course: " + roundsDelete.error.message)
+      return false
+    }
+
+    const detachRes = await clearRoundCourseByCourseId(courseToDelete.id)
+    if (detachRes.error) {
+      setLoading(false)
+      alert("Could not clear old round links for this course: " + detachRes.error.message)
+      return false
+    }
+
+    const deleteRes = await deleteCourseById(courseToDelete.id)
+    setLoading(false)
+
+    if (deleteRes.error) {
+      alert("Could not delete course: " + deleteRes.error.message)
+      return false
+    }
+
+    if (selectedCourseId === courseToDelete.id) {
+      setSelectedCourseId("")
+      setIsNewCourse(true)
+      setCourse("")
+    }
+
+    await Promise.all([loadCourses(), loadRounds()])
+    return true
   }
 
   function buildCurrentHoleCourseData(baseData = newCoursePars) {
@@ -749,6 +866,145 @@ function App() {
     await loadCourses()
   }
 
+  async function refreshSelectedReviewRound(roundIdValue = selectedReviewRound?.id) {
+    if (!roundIdValue) return false
+
+    const bundle = await fetchRoundBundle(roundIdValue)
+
+    if (bundle.holesRes.error) {
+      alert("Could not refresh holes: " + bundle.holesRes.error.message)
+      return false
+    }
+    if (bundle.shotsRes.error) {
+      alert("Could not refresh shots: " + bundle.shotsRes.error.message)
+      return false
+    }
+
+    setSelectedReviewHoles(bundle.holesRes.data || [])
+    setSelectedReviewShots(bundle.shotsRes.data || [])
+    await loadRounds()
+    return true
+  }
+
+  async function saveReviewHoleEdits(holeToSave, parValue, editedShots) {
+    if (!selectedReviewRound?.id || !selectedReviewRound?.user_id) {
+      alert("Could not identify the selected round")
+      return false
+    }
+
+    const selectedPar = parseInt(parValue, 10)
+    if (!Number.isFinite(selectedPar)) {
+      alert("Please choose par")
+      return false
+    }
+
+    const validShots = getValidShots(editedShots)
+    if (validShots.length === 0) {
+      alert("Please log at least one shot with distance to hole")
+      return false
+    }
+
+    const holeNumber = Number(holeToSave.hole_number)
+    const totals = calculateShotModeTotals(editedShots)
+    const inferred = inferHoleValuesFromShots(selectedPar, validShots)
+    const evaluatedShots = evaluateHoleStrokesGained(validShots)
+
+    setLoading(true)
+
+    const deleteExistingShots = await deleteShotsByRoundAndHole(selectedReviewRound.id, holeNumber)
+    if (deleteExistingShots.error) {
+      setLoading(false)
+      alert("Error replacing saved shots: " + deleteExistingShots.error.message)
+      return false
+    }
+
+    const deleteExistingHole = await deleteHoleByRoundAndNumber(selectedReviewRound.id, holeNumber)
+    if (deleteExistingHole.error) {
+      setLoading(false)
+      alert("Error replacing saved hole: " + deleteExistingHole.error.message)
+      return false
+    }
+
+    const { data, error } = await insertHole({
+      user_id: selectedReviewRound.user_id,
+      round_id: selectedReviewRound.id,
+      hole_number: holeNumber,
+      par: selectedPar,
+      entry_mode: "shot_by_shot",
+      score: totals.totalScore,
+      putts: inferred.putts,
+      fairway: inferred.fairway,
+      gir: inferred.gir,
+      penalty: totals.autoPenalty,
+      skipped: false,
+    })
+
+    if (error) {
+      setLoading(false)
+      alert("Error saving edits: " + error.message)
+      return false
+    }
+
+    const newHoleId = data?.[0]?.id
+    const shotRows = evaluatedShots.map((shot, index) => ({
+      user_id: selectedReviewRound.user_id,
+      round_id: selectedReviewRound.id,
+      hole_id: newHoleId,
+      hole_number: holeNumber,
+      shot_number: index + 1,
+      lie: shot.lie,
+      distance_to_flag: Number(shot.distance_to_flag),
+      miss_pattern: shot.miss_pattern || null,
+      strike_quality: shot.strike_quality || null,
+      auto_penalty: Number(shot.auto_penalty || 0),
+      sg_category: shot.sg_category,
+      expected_before: shot.expected_before,
+      expected_after: shot.expected_after,
+      strokes_gained: shot.strokes_gained,
+    }))
+
+    const shotInsert = await insertShots(shotRows)
+    setLoading(false)
+
+    if (shotInsert.error) {
+      alert("Hole was saved, but shots failed to save: " + shotInsert.error.message)
+      return false
+    }
+
+    return refreshSelectedReviewRound(selectedReviewRound.id)
+  }
+
+  async function deleteReviewHole(holeToDelete) {
+    if (!selectedReviewRound?.id) return false
+
+    const confirmed = window.confirm(`Delete hole ${holeToDelete.hole_number}?`)
+    if (!confirmed) return false
+
+    setLoading(true)
+    const shotsDelete = await deleteShotsByRoundAndHole(
+      selectedReviewRound.id,
+      holeToDelete.hole_number
+    )
+    if (shotsDelete.error) {
+      setLoading(false)
+      alert("Could not delete shots: " + shotsDelete.error.message)
+      return false
+    }
+
+    const holeDelete = await deleteHoleByRoundAndNumber(
+      selectedReviewRound.id,
+      holeToDelete.hole_number
+    )
+    setLoading(false)
+
+    if (holeDelete.error) {
+      alert("Could not delete hole: " + holeDelete.error.message)
+      return false
+    }
+
+    return refreshSelectedReviewRound(selectedReviewRound.id)
+  }
+
   function updateRoundTags(roundIdValue, tags) {
     setStoredRoundTags(roundIdValue, tags)
 
@@ -844,7 +1100,9 @@ function App() {
           homeTrendData={homeTrendData}
           goToPlayRound={() => setScreen("playRound")}
           goToRounds={openRoundsScreen}
+          goToTrends={() => setScreen("trends")}
           goToAnalytics={() => setScreen("analytics")}
+          goToCourses={openCoursesScreen}
         />
       </div>
     )
@@ -919,11 +1177,38 @@ function App() {
     )
   }
 
-  if (screen === "analytics") {
+  if (screen === "trends") {
     return (
       <div className="app-shell">
         <AnalyticsScreen
           courses={courses}
+          goHome={() => setScreen("home")}
+          styles={styles}
+        />
+      </div>
+    )
+  }
+
+  if (screen === "analytics") {
+    return (
+      <div className="app-shell">
+        <ShotAnalyticsScreen
+          courses={courses}
+          goHome={() => setScreen("home")}
+          styles={styles}
+        />
+      </div>
+    )
+  }
+
+  if (screen === "courses") {
+    return (
+      <div className="app-shell">
+        <MyCoursesScreen
+          courses={courses}
+          loading={loading}
+          renameCourse={renameCourse}
+          deleteCourse={deleteCourse}
           goHome={() => setScreen("home")}
           styles={styles}
         />
@@ -956,6 +1241,8 @@ function App() {
           reviewSummary={reviewSummary}
           updateRoundTags={updateRoundTags}
           deleteRound={deleteRound}
+          saveReviewHoleEdits={saveReviewHoleEdits}
+          deleteReviewHole={deleteReviewHole}
           loading={loading}
           goHome={() => setScreen("home")}
           styles={styles}

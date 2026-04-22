@@ -3,7 +3,9 @@ import HomeTrendSparkline from "./HomeTrendSparkline"
 export default function HomeScreen({
   goToPlayRound,
   goToRounds,
+  goToTrends,
   goToAnalytics,
+  goToCourses,
   homeTrendData,
   styles,
 }) {
@@ -26,8 +28,16 @@ export default function HomeScreen({
             Review Rounds
           </button>
 
+          <button style={styles.secondaryButton} onClick={goToTrends}>
+            Trends
+          </button>
+
           <button style={styles.secondaryButton} onClick={goToAnalytics}>
             Analytics
+          </button>
+
+          <button style={styles.secondaryButton} onClick={goToCourses}>
+            My Courses
           </button>
         </div>
       </div>

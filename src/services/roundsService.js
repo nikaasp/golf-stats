@@ -41,3 +41,26 @@ export async function deleteRoundById(roundId) {
 
   return supabase.from("rounds").delete().eq("id", roundId)
 }
+
+export async function deleteRoundsByCourseId(courseId) {
+  const roundsRes = await supabase
+    .from("rounds")
+    .select("id")
+    .eq("course_id", courseId)
+
+  if (roundsRes.error) return { error: roundsRes.error }
+
+  const roundIds = (roundsRes.data || []).map((round) => round.id)
+
+  if (roundIds.length === 0) {
+    return { data: [], error: null }
+  }
+
+  const deleteShots = await supabase.from("shots").delete().in("round_id", roundIds)
+  if (deleteShots.error) return { error: deleteShots.error }
+
+  const deleteHoles = await supabase.from("holes").delete().in("round_id", roundIds)
+  if (deleteHoles.error) return { error: deleteHoles.error }
+
+  return supabase.from("rounds").delete().in("id", roundIds)
+}

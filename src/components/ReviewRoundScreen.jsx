@@ -3,6 +3,7 @@ import StatCard from "./StatCard"
 import Scorecard from "./Scorecard"
 import HoleValueChart from "./HoleValueChart"
 import MissPatternBarChart from "./MissPatternBarChart"
+import ReviewHoleEditor from "./ReviewHoleEditor"
 import { formatToPar } from "../utils/golfFormatters"
 import {
   buildMissPatternByCategoryFromShots,
@@ -47,14 +48,29 @@ export default function ReviewRoundScreen({
   reviewSummary,
   updateRoundTags,
   deleteRound,
+  saveReviewHoleEdits,
+  deleteReviewHole,
   loading,
   goHome,
   styles,
 }) {
   const [page, setPage] = useState(0)
   const [missChartIndex, setMissChartIndex] = useState(0)
+  const [editingHole, setEditingHole] = useState(null)
   const [tagInput, setTagInput] = useState(() => (selectedReviewRound?.tags || []).join(", "))
-  const pages = ["Stats", "Score", "SG", "Accuracy", "Putts", "1st Putt", "Misses", "Tags"]
+  const pages = [
+    "Stats",
+    "Score",
+    "SG",
+    "Accuracy",
+    "Approach",
+    "Short",
+    "Putting",
+    "1st Putt",
+    "Mistakes",
+    "Misses",
+    "Tags",
+  ]
 
   const holeStats = useMemo(
     () => buildRoundHoleStats(selectedReviewHoles, selectedReviewShots),
@@ -101,6 +117,32 @@ export default function ReviewRoundScreen({
     missPatternCharts[
       Math.min(Math.max(0, missChartIndex - 1), Math.max(0, missPatternCharts.length - 1))
     ]
+
+  const editingHoleShots = editingHole
+    ? selectedReviewShots.filter(
+        (shot) => Number(shot.hole_number) === Number(editingHole.hole_number)
+      )
+    : []
+
+  if (editingHole) {
+    return (
+      <ReviewHoleEditor
+        hole={editingHole}
+        savedShots={editingHoleShots}
+        styles={styles}
+        loading={loading}
+        onCancel={() => setEditingHole(null)}
+        onSave={async (holeToSave, par, shots) => {
+          const ok = await saveReviewHoleEdits(holeToSave, par, shots)
+          if (ok) setEditingHole(null)
+        }}
+        onDelete={async (holeToDelete) => {
+          const ok = await deleteReviewHole(holeToDelete)
+          if (ok) setEditingHole(null)
+        }}
+      />
+    )
+  }
 
   return (
     <div style={styles.fixedScreen}>
@@ -152,8 +194,37 @@ export default function ReviewRoundScreen({
                 value={avgFirstPuttDistance === "-" ? "-" : `${avgFirstPuttDistance} m`}
                 styles={styles}
               />
+              <StatCard
+                label="1st Putt GIR"
+                value={
+                  reviewSummary.avgFirstPuttOnGir === "-"
+                    ? "-"
+                    : `${reviewSummary.avgFirstPuttOnGir} m`
+                }
+                styles={styles}
+              />
               <StatCard label="FW %" value={`${reviewSummary.fwPct}%`} styles={styles} />
               <StatCard label="GIR %" value={`${reviewSummary.girPct}%`} styles={styles} />
+              <StatCard
+                label="Scramble %"
+                value={`${reviewSummary.scramblePct}%`}
+                styles={styles}
+              />
+              <StatCard
+                label="Up/down %"
+                value={`${reviewSummary.upDownPct}%`}
+                styles={styles}
+              />
+              <StatCard
+                label="3-putt %"
+                value={`${reviewSummary.threePuttPct}%`}
+                styles={styles}
+              />
+              <StatCard
+                label="Penalties"
+                value={reviewSummary.penaltyStrokes}
+                styles={styles}
+              />
             </div>
           </div>
         )}
@@ -161,7 +232,11 @@ export default function ReviewRoundScreen({
         {page === 1 && (
           <div style={styles.sectionCardCompact}>
             <h2 style={styles.sectionTitle}>Scorecard</h2>
-            <Scorecard holes={reviewSummary.holes} styles={styles} />
+            <Scorecard
+              holes={reviewSummary.holes}
+              styles={styles}
+              onHoleSelect={setEditingHole}
+            />
           </div>
         )}
 
@@ -206,6 +281,47 @@ export default function ReviewRoundScreen({
 
         {page === 4 && (
           <div style={styles.sectionCardCompact}>
+            <h2 style={styles.sectionTitle}>Approach Proximity</h2>
+            <div style={styles.statsGrid}>
+              {Object.entries(reviewSummary.approachProximityBands || {}).map(
+                ([band, value]) => (
+                  <StatCard
+                    key={band}
+                    label={`${band} m`}
+                    value={value === "-" ? "-" : `${value} m`}
+                    styles={styles}
+                  />
+                )
+              )}
+              <StatCard
+                label="1st Putt GIR"
+                value={
+                  reviewSummary.avgFirstPuttOnGir === "-"
+                    ? "-"
+                    : `${reviewSummary.avgFirstPuttOnGir} m`
+                }
+                styles={styles}
+              />
+            </div>
+          </div>
+        )}
+
+        {page === 5 && (
+          <div style={styles.sectionCardCompact}>
+            <HoleValueChart
+              title="Scrambling by Hole"
+              data={holeStats}
+              dataKey="scramble"
+              type="bar"
+              color="#16a34a"
+              domain={[0, 1]}
+              valueFormatter={(value) => (Number(value) === 1 ? "Saved par" : "No save")}
+            />
+          </div>
+        )}
+
+        {page === 6 && (
+          <div style={styles.sectionCardCompact}>
             <HoleValueChart
               title="Putts by Hole"
               data={holeStats}
@@ -216,7 +332,7 @@ export default function ReviewRoundScreen({
           </div>
         )}
 
-        {page === 5 && (
+        {page === 7 && (
           <div style={styles.sectionCardCompact}>
             <HoleValueChart
               title="1st Putt Distance by Hole"
@@ -228,7 +344,32 @@ export default function ReviewRoundScreen({
           </div>
         )}
 
-        {page === 6 && (
+        {page === 8 && (
+          <div style={styles.fixedChartGrid}>
+            <div style={styles.sectionCardCompact}>
+              <HoleValueChart
+                title="Penalty Strokes by Hole"
+                data={holeStats}
+                dataKey="penalty"
+                type="bar"
+                color="#dc2626"
+              />
+            </div>
+            <div style={styles.sectionCardCompact}>
+              <HoleValueChart
+                title="3-Putts by Hole"
+                data={holeStats}
+                dataKey="threePutt"
+                type="bar"
+                color="#f97316"
+                domain={[0, 1]}
+                valueFormatter={(value) => (Number(value) === 1 ? "3-putt" : "No")}
+              />
+            </div>
+          </div>
+        )}
+
+        {page === 9 && (
           <div style={styles.sectionCardCompact}>
             {missPatternCharts.length === 0 ? (
               <p style={styles.mutedText}>No miss pattern data for this round.</p>
@@ -279,7 +420,7 @@ export default function ReviewRoundScreen({
           </div>
         )}
 
-        {page === 7 && (
+        {page === 10 && (
           <div style={styles.sectionCardCompact}>
             <label style={styles.label}>Round tags</label>
             <input

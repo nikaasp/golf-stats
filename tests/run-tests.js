@@ -114,6 +114,7 @@ runTest("inferHoleMetrics derives fairway, GIR, putts, drive, and approach dista
     putts: 2,
     drivingDistance: 245,
     approachAccuracy: 137,
+    firstPuttDistance: 8,
   })
 })
 
