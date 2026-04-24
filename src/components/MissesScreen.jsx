@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
+import MissPatternBarChart from "./MissPatternBarChart"
 import ShotFiltersCard from "./ShotFiltersCard"
 import {
   fetchRoundsForAnalytics,
-  fetchHolesForRoundIds,
   fetchShotsForRoundIds,
 } from "../services/analyticsService"
 import {
@@ -12,12 +12,26 @@ import {
 } from "../utils/roundTags"
 import {
   buildShotRows,
+  countMissPatterns,
+  finiteNumber,
   formatNumber,
   getCourseLabel,
   getDistanceLabel,
+  getTopKey,
   summarizeShots,
-  finiteNumber,
 } from "../utils/shotInsights"
+
+const MISS_LABELS = {
+  long_left: "Long Left",
+  long: "Long",
+  long_right: "Long Right",
+  left: "Left",
+  right: "Right",
+  short_left: "Short Left",
+  short: "Short",
+  short_right: "Short Right",
+  spot_on: "Spot On",
+}
 
 function MetricCard({ label, value, styles }) {
   return (
@@ -28,14 +42,14 @@ function MetricCard({ label, value, styles }) {
   )
 }
 
-export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
+export default function MissesScreen({ courses, styles, goHome }) {
   const today = new Date().toISOString().slice(0, 10)
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [rounds, setRounds] = useState([])
   const [shots, setShots] = useState([])
-  const [holes, setHoles] = useState([])
   const [availableTags, setAvailableTags] = useState([])
+  const pages = ["Filter", "Overview", "Directions", "Lies"]
 
   const [draftFilters, setDraftFilters] = useState({
     startDate: "",
@@ -48,13 +62,12 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
   })
 
   const [appliedFilters, setAppliedFilters] = useState(draftFilters)
-  const pages = ["Filter", "SG", "Accuracy"]
 
   const updateDraft = (field, value) => {
     setDraftFilters((prev) => ({ ...prev, [field]: value }))
   }
 
-  const loadAnalytics = useCallback(async () => {
+  const loadMisses = useCallback(async () => {
     setLoading(true)
 
     const roundsRes = await fetchRoundsForAnalytics({
@@ -65,7 +78,7 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
 
     if (roundsRes.error) {
       setLoading(false)
-      alert("Could not load analytics rounds: " + roundsRes.error.message)
+      alert("Could not load misses rounds: " + roundsRes.error.message)
       return
     }
 
@@ -75,39 +88,44 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
       roundMatchesTagFilter(round, appliedFilters.tagFilter)
     )
     const roundIds = filteredRounds.map((round) => round.id)
-    const [shotsRes, holesRes] = await Promise.all([
-      fetchShotsForRoundIds(roundIds),
-      fetchHolesForRoundIds(roundIds),
-    ])
+    const shotsRes = await fetchShotsForRoundIds(roundIds)
 
     setLoading(false)
 
     if (shotsRes.error) {
-      alert("Could not load analytics shots: " + shotsRes.error.message)
-      return
-    }
-
-    if (holesRes.error) {
-      alert("Could not load analytics holes: " + holesRes.error.message)
+      alert("Could not load misses shots: " + shotsRes.error.message)
       return
     }
 
     setRounds(filteredRounds)
     setShots(shotsRes.data || [])
-    setHoles(holesRes.data || [])
   }, [appliedFilters])
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      void loadAnalytics()
+      void loadMisses()
     }, 0)
 
     return () => clearTimeout(timerId)
-  }, [loadAnalytics])
+  }, [loadMisses])
 
   const shotRows = useMemo(() => buildShotRows(shots), [shots])
 
   const filteredShots = useMemo(() => {
+    const minDistance = finiteNumber(appliedFilters.minDistance)
+    const maxDistance = finiteNumber(appliedFilters.maxDistance)
+
+    return shotRows.filter((shot) => {
+      if (shot.startDistance === null) return false
+      if (!shot.miss_pattern) return false
+      if (minDistance !== null && shot.startDistance < minDistance) return false
+      if (maxDistance !== null && shot.startDistance > maxDistance) return false
+      if (appliedFilters.lie !== "all" && shot.lie !== appliedFilters.lie) return false
+      return true
+    })
+  }, [appliedFilters, shotRows])
+
+  const allVisibleShots = useMemo(() => {
     const minDistance = finiteNumber(appliedFilters.minDistance)
     const maxDistance = finiteNumber(appliedFilters.maxDistance)
 
@@ -120,22 +138,26 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
     })
   }, [appliedFilters, shotRows])
 
-  const summary = useMemo(() => summarizeShots(filteredShots), [filteredShots])
+  const summary = useMemo(() => summarizeShots(allVisibleShots), [allVisibleShots])
+  const missCounts = useMemo(() => countMissPatterns(filteredShots), [filteredShots])
+  const topMiss = getTopKey(missCounts)
 
-  const accuracySummary = useMemo(() => {
-    const playedHoles = holes.filter((hole) => !hole.skipped)
-    const fairwayEligible = playedHoles.filter((hole) => Number(hole.par) > 3)
-    const fairwayHits = fairwayEligible.filter((hole) => hole.fairway === true).length
-    const girEligible = playedHoles.filter((hole) => Number.isFinite(Number(hole.par)))
-    const girHits = girEligible.filter((hole) => hole.gir === true).length
+  const lieBreakdown = useMemo(() => {
+    const lies = ["Tee", "Fairway", "Rough", "Sand", "Recovery", "Green"]
+    return lies.map((lie) => {
+      const shotsForLie = allVisibleShots.filter((shot) => shot.lie === lie)
+      const missShots = shotsForLie.filter((shot) => shot.miss_pattern)
+      const counts = countMissPatterns(missShots)
 
-    return {
-      fairwayPct:
-        fairwayEligible.length > 0 ? (fairwayHits / fairwayEligible.length) * 100 : null,
-      girPct: girEligible.length > 0 ? (girHits / girEligible.length) * 100 : null,
-      avgEndDistance: summary.avgEndDistance,
-    }
-  }, [holes, summary.avgEndDistance])
+      return {
+        label: lie,
+        totalShots: shotsForLie.length,
+        missShots: missShots.length,
+        missRate: shotsForLie.length > 0 ? (missShots.length / shotsForLie.length) * 100 : null,
+        topMiss: MISS_LABELS[getTopKey(counts)] || "-",
+      }
+    })
+  }, [allVisibleShots])
 
   const filterSummary = [
     `Period: ${appliedFilters.startDate || "any"} - ${appliedFilters.endDate || "any"}`,
@@ -149,7 +171,7 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
     <div style={styles.fixedScreen}>
       <div style={styles.fixedTopSection}>
         <div style={styles.sectionCardCompact}>
-          <h1 style={styles.pageTitle}>Analytics</h1>
+          <h1 style={styles.pageTitle}>Misses</h1>
           <div style={styles.screenStepPills}>
             {pages.map((label, index) => (
               <button
@@ -189,22 +211,22 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
             availableTags={availableTags}
             loading={loading}
             onApply={() => setAppliedFilters(draftFilters)}
-            statusText={`Showing ${filteredShots.length} shots from ${rounds.length} rounds.`}
+            statusText={`Showing ${filteredShots.length} misses from ${rounds.length} rounds.`}
           />
         )}
 
         {page === 1 && (
           <div style={styles.sectionCardCompact}>
             <div style={styles.statsGrid}>
-              <MetricCard label="Shots" value={summary.count} styles={styles} />
+              <MetricCard label="Misses logged" value={filteredShots.length} styles={styles} />
               <MetricCard
-                label="Avg SG"
-                value={formatNumber(summary.avgSg)}
+                label="Miss rate"
+                value={formatNumber(summary.missRate, 1, "%")}
                 styles={styles}
               />
               <MetricCard
-                label="Positive SG"
-                value={formatNumber(summary.positivePct, 1, "%")}
+                label="Most common"
+                value={MISS_LABELS[topMiss] || "-"}
                 styles={styles}
               />
             </div>
@@ -213,23 +235,26 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
 
         {page === 2 && (
           <div style={styles.sectionCardCompact}>
-            <h2 style={styles.sectionTitle}>Accuracy</h2>
-            <div style={styles.statsGrid}>
-              <MetricCard
-                label="Fairway hit %"
-                value={formatNumber(accuracySummary.fairwayPct, 1, "%")}
-                styles={styles}
-              />
-              <MetricCard
-                label="GIR %"
-                value={formatNumber(accuracySummary.girPct, 1, "%")}
-                styles={styles}
-              />
-              <MetricCard
-                label="Distance to flag after shot"
-                value={formatNumber(accuracySummary.avgEndDistance, 1, " m")}
-                styles={styles}
-              />
+            {filteredShots.length === 0 ? (
+              <p style={styles.mutedText}>No miss direction data available.</p>
+            ) : (
+              <MissPatternBarChart title="Miss Directions" counts={missCounts} styles={styles} />
+            )}
+          </div>
+        )}
+
+        {page === 3 && (
+          <div style={styles.sectionCardCompact}>
+            <h2 style={styles.sectionTitle}>By Lie</h2>
+            <div style={styles.analyticsTable}>
+              {lieBreakdown.map((row) => (
+                <div key={row.label} style={styles.analyticsTableRow}>
+                  <strong>{row.label}</strong>
+                  <span>{row.missShots} misses</span>
+                  <span>{formatNumber(row.missRate, 1, "%")}</span>
+                  <span>{row.topMiss}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -9,6 +9,8 @@ export default function RoundFilters({
   setCourseId,
   tagFilter,
   setTagFilter,
+  availableTags = [],
+  showTagFilter = true,
   onApply,
   loading = false,
 }) {
@@ -56,14 +58,49 @@ export default function RoundFilters({
         ))}
       </select>
 
-      <label style={styles.label}>Tag</label>
-      <input
-        style={styles.inputCompact}
-        type="text"
-        value={tagFilter}
-        onChange={(e) => setTagFilter(e.target.value)}
-        placeholder="rain, windy, tournament"
-      />
+      {showTagFilter && (
+        <>
+          <label style={styles.label}>Tag</label>
+          <input
+            style={styles.inputCompact}
+            type="text"
+            value={tagFilter}
+            onChange={(e) => setTagFilter(e.target.value)}
+            placeholder="rain, windy, tournament"
+          />
+
+          <label style={styles.label}>Existing tags</label>
+          {availableTags.length === 0 ? (
+            <p style={styles.mutedText}>No saved tags yet.</p>
+          ) : (
+            <div style={styles.tagRowCompact}>
+              {availableTags.map((tag) => {
+                const selected = String(tagFilter || "").trim().toLowerCase() === tag.toLowerCase()
+
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    style={{
+                      ...styles.tagChip,
+                      ...(selected
+                        ? {
+                            background: "#dcfce7",
+                            border: "1px solid #16a34a",
+                            color: "#166534",
+                          }
+                        : {}),
+                    }}
+                    onClick={() => setTagFilter(selected ? "" : tag)}
+                  >
+                    {tag}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </>
+      )}
 
       <button style={styles.primaryButton} type="submit" disabled={loading}>
         {loading ? "Loading..." : "Apply Filter"}

@@ -1,4 +1,4 @@
-export const styles = {
+const baseStyles = {
   page: {
     height: "100dvh",
     display: "flex",
@@ -716,6 +716,42 @@ export const styles = {
     display: "flex",
     flexDirection: "column",
     gap: "12px",
+  },
+
+  homeAdvancedSection: {
+    marginTop: "4px",
+    paddingTop: "10px",
+    borderTop: "1px solid #e5e7eb",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+
+  homeAdvancedLabel: {
+    fontSize: "11px",
+    fontWeight: 800,
+    color: "#6b7280",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+
+  homeAdvancedHint: {
+    margin: 0,
+    fontSize: "12px",
+    color: "#6b7280",
+    lineHeight: 1.3,
+  },
+
+  homeAdvancedButton: {
+    width: "100%",
+    minHeight: "42px",
+    borderRadius: "12px",
+    border: "1px solid #d1d5db",
+    background: "#f9fafb",
+    color: "#374151",
+    fontWeight: 700,
+    fontSize: "14px",
+    cursor: "pointer",
   },
 
   selectInput: {
@@ -2016,4 +2052,192 @@ export const styles = {
     cursor: "pointer",
     padding: 0,
   },
+}
+
+function mergeStyles(base, overrides) {
+  return Object.fromEntries(
+    Object.keys(base).map((key) => [
+      key,
+      overrides[key] ? { ...base[key], ...overrides[key] } : base[key],
+    ])
+  )
+}
+
+const smallPhoneOverrides = {
+  headerSparklineCard: {
+    padding: "10px",
+    marginBottom: "12px",
+    borderRadius: "14px",
+  },
+  headerSparklineLabel: {
+    fontSize: "11px",
+    marginBottom: "8px",
+  },
+  homeButtonStack: {
+    gap: "10px",
+  },
+  homeAdvancedSection: {
+    paddingTop: "8px",
+    gap: "6px",
+  },
+  homeAdvancedLabel: {
+    fontSize: "10px",
+  },
+  homeAdvancedHint: {
+    fontSize: "11px",
+  },
+  homeAdvancedButton: {
+    minHeight: "38px",
+    fontSize: "14px",
+  },
+  pageTitle: {
+    fontSize: "20px",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+  },
+  mutedText: {
+    fontSize: "12px",
+    marginTop: "6px",
+  },
+  label: {
+    marginTop: "6px",
+    marginBottom: "4px",
+    fontSize: "12px",
+  },
+  inputCompact: {
+    minHeight: "34px",
+    padding: "7px 9px",
+    fontSize: "13px",
+    borderRadius: "10px",
+  },
+  textInput: {
+    minHeight: "38px",
+    padding: "8px 10px",
+    fontSize: "13px",
+    borderRadius: "10px",
+  },
+  selectInput: {
+    minHeight: "38px",
+    padding: "8px 10px",
+    fontSize: "13px",
+    borderRadius: "10px",
+  },
+  primaryButton: {
+    marginTop: "10px",
+    minHeight: "38px",
+    fontSize: "14px",
+    borderRadius: "12px",
+  },
+  secondaryButton: {
+    minHeight: "38px",
+    fontSize: "14px",
+    borderRadius: "12px",
+  },
+  secondaryButtonCompact: {
+    minHeight: "34px",
+    padding: "0 10px",
+    fontSize: "13px",
+    borderRadius: "10px",
+  },
+  deleteRoundButtonLarge: {
+    minHeight: "38px",
+    fontSize: "13px",
+    borderRadius: "12px",
+  },
+  deleteRoundButton: {
+    minHeight: "36px",
+    fontSize: "13px",
+    borderRadius: "10px",
+  },
+  fixedScreen: {
+    gap: "4px",
+  },
+  fixedMainSection: {
+    gap: "6px",
+  },
+  fixedBottomSection: {
+    gap: "6px",
+    paddingBottom: "6px",
+  },
+  sectionCardCompact: {
+    padding: "7px",
+    borderRadius: "12px",
+  },
+  analyticsFilterCard: {
+    marginTop: "8px",
+    paddingTop: "8px",
+    gap: "4px",
+  },
+  analyticsFilterGrid: {
+    gap: "6px",
+  },
+  filterStatusText: {
+    marginTop: "6px",
+    fontSize: "11px",
+  },
+  analyticsFilterSummaryCard: {
+    padding: "5px 7px",
+  },
+  analyticsFilterSummaryChip: {
+    fontSize: "9px",
+    padding: "3px 6px",
+  },
+  screenStepPills: {
+    gap: "4px",
+    marginTop: "6px",
+  },
+  screenStepPill: {
+    padding: "4px 7px",
+    fontSize: "10px",
+  },
+  compactMetricCard: {
+    padding: "6px",
+  },
+  compactMetricValue: {
+    fontSize: "16px",
+  },
+  compactMetricLabel: {
+    marginTop: "4px",
+    fontSize: "10px",
+  },
+  analyticsTable: {
+    gap: "6px",
+    marginTop: "8px",
+  },
+  analyticsTableRow: {
+    gap: "4px",
+    padding: "6px",
+    fontSize: "10px",
+  },
+  roundPagerMeta: {
+    marginBottom: "8px",
+    fontSize: "10px",
+  },
+  roundListItemCompact: {
+    padding: "10px",
+    borderRadius: "12px",
+  },
+  roundCourse: {
+    fontSize: "15px",
+  },
+  roundDate: {
+    fontSize: "12px",
+  },
+  tagChip: {
+    padding: "6px 10px",
+    fontSize: "12px",
+  },
+  tagRowCompact: {
+    gap: "6px",
+    marginTop: "6px",
+    minHeight: "26px",
+  },
+}
+
+export const styles = baseStyles
+
+export function getStyles(phoneSize = "large") {
+  if (phoneSize !== "small") return baseStyles
+  return mergeStyles(baseStyles, smallPhoneOverrides)
 }

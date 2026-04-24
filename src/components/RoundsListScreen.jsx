@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react"
 import RoundFilters from "./RoundFilters"
-import { roundMatchesTagFilter } from "../utils/roundTags"
 
 function getRoundDateOnly(round) {
   return String(round?.date || "").slice(0, 10)
@@ -36,7 +35,7 @@ export default function RoundsListScreen({
       startDate: draftStartDate,
       endDate: draftEndDate,
       courseId: draftCourseId,
-      tagFilter: draftTagFilter,
+      tagFilter: "",
     })
     setFilterStatus("Filters applied")
     setIndex(0)
@@ -54,7 +53,6 @@ export default function RoundsListScreen({
       ) {
         return false
       }
-      if (!roundMatchesTagFilter(round, appliedFilters.tagFilter)) return false
       return true
     })
   }, [appliedFilters, reviewRounds])
@@ -84,6 +82,7 @@ export default function RoundsListScreen({
             setCourseId={setDraftCourseId}
             tagFilter={draftTagFilter}
             setTagFilter={setDraftTagFilter}
+            showTagFilter={false}
             onApply={applyFilters}
             loading={loading}
           />

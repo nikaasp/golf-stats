@@ -127,6 +127,11 @@ img {
   flex-direction: column;
 }
 
+.app-shell--small {
+  max-width: 360px;
+  padding: 4px;
+}
+
 .card,
 .shot-card {
   background: var(--card);

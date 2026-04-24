@@ -4,16 +4,37 @@ function canUseStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined"
 }
 
-function normalizeTags(tags = []) {
+export function normalizeRoundTags(tags = [], preferredTags = []) {
   if (!Array.isArray(tags)) return []
 
-  return Array.from(
-    new Set(
-      tags
-        .map((tag) => String(tag || "").trim())
-        .filter(Boolean)
-    )
-  )
+  const preferredMap = new Map()
+
+  if (Array.isArray(preferredTags)) {
+    preferredTags.forEach((tag) => {
+      const cleaned = String(tag || "").trim()
+      if (!cleaned) return
+      const key = cleaned.toLowerCase()
+      if (!preferredMap.has(key)) {
+        preferredMap.set(key, cleaned)
+      }
+    })
+  }
+
+  const normalized = []
+  const seen = new Set()
+
+  tags.forEach((tag) => {
+    const cleaned = String(tag || "").trim()
+    if (!cleaned) return
+
+    const key = cleaned.toLowerCase()
+    if (seen.has(key)) return
+
+    seen.add(key)
+    normalized.push(preferredMap.get(key) || cleaned)
+  })
+
+  return normalized
 }
 
 export function getStoredRoundTagsMap() {
@@ -33,7 +54,7 @@ export function setStoredRoundTags(roundId, tags = []) {
   if (!canUseStorage() || !roundId) return
 
   const map = getStoredRoundTagsMap()
-  map[String(roundId)] = normalizeTags(tags)
+  map[String(roundId)] = normalizeRoundTags(tags)
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(map))
 }
 
@@ -42,7 +63,7 @@ export function getRoundTags(round) {
 
   const dbTags = Array.isArray(round.tags) ? round.tags : []
   const storedTags = getStoredRoundTagsMap()[String(round.id)] || []
-  return normalizeTags([...dbTags, ...storedTags])
+  return normalizeRoundTags([...dbTags, ...storedTags], [...dbTags, ...storedTags])
 }
 
 export function hydrateRoundsWithStoredTags(rounds = []) {
@@ -50,6 +71,12 @@ export function hydrateRoundsWithStoredTags(rounds = []) {
     ...round,
     tags: getRoundTags(round),
   }))
+}
+
+export function collectAvailableTags(rounds = []) {
+  return normalizeRoundTags(
+    rounds.flatMap((round) => (Array.isArray(round?.tags) ? round.tags : []))
+  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
 }
 
 export function roundMatchesTagFilter(round, tagFilter) {

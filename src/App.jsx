@@ -10,6 +10,7 @@ import ReviewRoundScreen from "./components/ReviewRoundScreen"
 import RoundsListScreen from "./components/RoundsListScreen"
 import AnalyticsScreen from "./components/AnalyticsScreen"
 import ShotAnalyticsScreen from "./components/ShotAnalyticsScreen"
+import PlayingStyleScreen from "./components/PlayingStyleScreen"
 import InRoundScreen from "./components/InRoundScreen"
 import MyCoursesScreen from "./components/MyCoursesScreen"
 
@@ -25,7 +26,7 @@ import {
   updateRoundCourse,
 } from "./services/coursesService"
 
-import { styles } from "./utils/styles"
+import { getStyles } from "./utils/styles"
 
 import {
   evaluateHoleStrokesGained,
@@ -54,6 +55,7 @@ import { fetchShotsForRoundIds } from "./services/analyticsService"
 import { deleteHoleByRoundAndNumber, insertHole } from "./services/holesService"
 import { deleteShotsByRoundAndHole, insertShots } from "./services/shotsService"
 import {
+  collectAvailableTags,
   hydrateRoundsWithStoredTags,
   setStoredRoundTags,
 } from "./utils/roundTags"
@@ -126,6 +128,12 @@ function ConfigErrorScreen({ message }) {
 }
 
 function App() {
+  const [phoneSize, setPhoneSize] = useState(() => {
+    if (typeof window === "undefined") return "large"
+    return window.localStorage.getItem("golf-stats-phone-size") === "small"
+      ? "small"
+      : "large"
+  })
   const [session, setSession] = useState(null)
   const [authLoading, setAuthLoading] = useState(() => Boolean(supabase))
 
@@ -145,6 +153,7 @@ function App() {
   const [selectedReviewRound, setSelectedReviewRound] = useState(null)
   const [selectedReviewHoles, setSelectedReviewHoles] = useState([])
   const [selectedReviewShots, setSelectedReviewShots] = useState([])
+  const [summaryRoundTags, setSummaryRoundTags] = useState([])
 
   const [par, setPar] = useState("")
 
@@ -155,6 +164,11 @@ function App() {
   const [selectedCourseId, setSelectedCourseId] = useState("")
   const [isNewCourse, setIsNewCourse] = useState(true)
   const [newCoursePars, setNewCoursePars] = useState([])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem("golf-stats-phone-size", phoneSize)
+  }, [phoneSize])
 
   const loadRounds = useCallback(async () => {
     const { data, error } = await fetchRounds()
@@ -428,7 +442,7 @@ function App() {
     }
   }
 
-  async function handleStartRound(roundTags = []) {
+  async function handleStartRound() {
     if (isNewCourse) {
       if (!course.trim()) {
         alert("Please enter a course name")
@@ -464,7 +478,7 @@ function App() {
     }
 
     const createdRoundId = data[0].id
-    setStoredRoundTags(createdRoundId, roundTags)
+    setSummaryRoundTags([])
 
     if (!isNewCourse && courseId) {
       await updateCourseLastPlayed(courseId)
@@ -1007,6 +1021,9 @@ function App() {
 
   function updateRoundTags(roundIdValue, tags) {
     setStoredRoundTags(roundIdValue, tags)
+    if (roundIdValue === roundId) {
+      setSummaryRoundTags(tags)
+    }
 
     setReviewRounds((prev) =>
       prev.map((round) =>
@@ -1022,6 +1039,7 @@ function App() {
   function goHomeAndReset() {
     setScreen("home")
     setRoundId(null)
+    setSummaryRoundTags([])
     setHole(1)
     setCourse("")
     setDate(new Date().toISOString().slice(0, 10))
@@ -1049,6 +1067,11 @@ function App() {
 
   const shotTotals = useMemo(() => calculateShotModeTotals(shots), [shots])
 
+  const availableRoundTags = useMemo(
+    () => collectAvailableTags(reviewRounds),
+    [reviewRounds]
+  )
+
   const roundSgSummary = useMemo(
     () => summarizeRoundStrokesGained(roundShots),
     [roundShots]
@@ -1069,6 +1092,9 @@ function App() {
   }, [selectedCourseData, hole])
 
   const currentHoleLength = currentCourseHoleData?.length_m ?? null
+  const styles = useMemo(() => getStyles(phoneSize), [phoneSize])
+  const appShellClassName =
+    phoneSize === "small" ? "app-shell app-shell--small" : "app-shell"
 
   if (supabaseConfigError) {
     return <ConfigErrorScreen message={supabaseConfigError} />
@@ -1076,7 +1102,7 @@ function App() {
 
   if (authLoading) {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <div style={{ padding: 40, fontFamily: "system-ui, sans-serif" }}>
           Loading...
         </div>
@@ -1086,7 +1112,7 @@ function App() {
 
   if (!session) {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <AuthScreen />
       </div>
     )
@@ -1094,14 +1120,17 @@ function App() {
 
   if (screen === "home") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <HomeScreen
           styles={styles}
           homeTrendData={homeTrendData}
+          phoneSize={phoneSize}
+          setPhoneSize={setPhoneSize}
           goToPlayRound={() => setScreen("playRound")}
           goToRounds={openRoundsScreen}
           goToTrends={() => setScreen("trends")}
           goToAnalytics={() => setScreen("analytics")}
+          goToPlayingStyle={() => setScreen("playingStyle")}
           goToCourses={openCoursesScreen}
         />
       </div>
@@ -1110,7 +1139,7 @@ function App() {
 
   if (screen === "playRound") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <PlayRoundScreen
           styles={styles}
           courses={courses}
@@ -1135,7 +1164,7 @@ function App() {
 
   if (screen === "inRound") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <InRoundScreen
           styles={styles}
           course={course}
@@ -1163,7 +1192,7 @@ function App() {
 
   if (screen === "rounds") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <RoundsListScreen
           reviewRounds={reviewRounds}
           courses={courses}
@@ -1179,7 +1208,7 @@ function App() {
 
   if (screen === "trends") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <AnalyticsScreen
           courses={courses}
           goHome={() => setScreen("home")}
@@ -1191,8 +1220,20 @@ function App() {
 
   if (screen === "analytics") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <ShotAnalyticsScreen
+          courses={courses}
+          goHome={() => setScreen("home")}
+          styles={styles}
+        />
+      </div>
+    )
+  }
+
+  if (screen === "playingStyle") {
+    return (
+      <div className={appShellClassName}>
+        <PlayingStyleScreen
           courses={courses}
           goHome={() => setScreen("home")}
           styles={styles}
@@ -1203,7 +1244,7 @@ function App() {
 
   if (screen === "courses") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <MyCoursesScreen
           courses={courses}
           loading={loading}
@@ -1218,12 +1259,16 @@ function App() {
 
   if (screen === "summary") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <SummaryScreen
+          roundId={roundId}
           course={course}
           date={date}
           summary={summary}
           sgSummary={roundSgSummary}
+          roundTags={summaryRoundTags}
+          availableTags={availableRoundTags}
+          updateRoundTags={updateRoundTags}
           goHomeAndReset={goHomeAndReset}
           styles={styles}
         />
@@ -1233,13 +1278,14 @@ function App() {
 
   if (screen === "review") {
     return (
-      <div className="app-shell">
+      <div className={appShellClassName}>
         <ReviewRoundScreen
           selectedReviewRound={selectedReviewRound}
           selectedReviewHoles={selectedReviewHoles}
           selectedReviewShots={selectedReviewShots}
           reviewSummary={reviewSummary}
           updateRoundTags={updateRoundTags}
+          availableTags={availableRoundTags}
           deleteRound={deleteRound}
           saveReviewHoleEdits={saveReviewHoleEdits}
           deleteReviewHole={deleteReviewHole}

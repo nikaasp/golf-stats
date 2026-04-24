@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import ShotFiltersCard from "./ShotFiltersCard"
 import {
   fetchRoundsForAnalytics,
-  fetchHolesForRoundIds,
   fetchShotsForRoundIds,
 } from "../services/analyticsService"
 import {
@@ -12,11 +11,11 @@ import {
 } from "../utils/roundTags"
 import {
   buildShotRows,
+  finiteNumber,
   formatNumber,
   getCourseLabel,
   getDistanceLabel,
   summarizeShots,
-  finiteNumber,
 } from "../utils/shotInsights"
 
 function MetricCard({ label, value, styles }) {
@@ -28,14 +27,14 @@ function MetricCard({ label, value, styles }) {
   )
 }
 
-export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
+export default function BallStrikingScreen({ courses, styles, goHome }) {
   const today = new Date().toISOString().slice(0, 10)
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [rounds, setRounds] = useState([])
   const [shots, setShots] = useState([])
-  const [holes, setHoles] = useState([])
   const [availableTags, setAvailableTags] = useState([])
+  const pages = ["Filter", "Overview", "Strike", "Lies"]
 
   const [draftFilters, setDraftFilters] = useState({
     startDate: "",
@@ -45,16 +44,16 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
     minDistance: "",
     maxDistance: "",
     lie: "all",
+    strike: "all",
   })
 
   const [appliedFilters, setAppliedFilters] = useState(draftFilters)
-  const pages = ["Filter", "SG", "Accuracy"]
 
   const updateDraft = (field, value) => {
     setDraftFilters((prev) => ({ ...prev, [field]: value }))
   }
 
-  const loadAnalytics = useCallback(async () => {
+  const loadBallStriking = useCallback(async () => {
     setLoading(true)
 
     const roundsRes = await fetchRoundsForAnalytics({
@@ -65,7 +64,7 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
 
     if (roundsRes.error) {
       setLoading(false)
-      alert("Could not load analytics rounds: " + roundsRes.error.message)
+      alert("Could not load ball-striking rounds: " + roundsRes.error.message)
       return
     }
 
@@ -75,35 +74,26 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
       roundMatchesTagFilter(round, appliedFilters.tagFilter)
     )
     const roundIds = filteredRounds.map((round) => round.id)
-    const [shotsRes, holesRes] = await Promise.all([
-      fetchShotsForRoundIds(roundIds),
-      fetchHolesForRoundIds(roundIds),
-    ])
+    const shotsRes = await fetchShotsForRoundIds(roundIds)
 
     setLoading(false)
 
     if (shotsRes.error) {
-      alert("Could not load analytics shots: " + shotsRes.error.message)
-      return
-    }
-
-    if (holesRes.error) {
-      alert("Could not load analytics holes: " + holesRes.error.message)
+      alert("Could not load ball-striking shots: " + shotsRes.error.message)
       return
     }
 
     setRounds(filteredRounds)
     setShots(shotsRes.data || [])
-    setHoles(holesRes.data || [])
   }, [appliedFilters])
 
   useEffect(() => {
     const timerId = setTimeout(() => {
-      void loadAnalytics()
+      void loadBallStriking()
     }, 0)
 
     return () => clearTimeout(timerId)
-  }, [loadAnalytics])
+  }, [loadBallStriking])
 
   const shotRows = useMemo(() => buildShotRows(shots), [shots])
 
@@ -113,35 +103,46 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
 
     return shotRows.filter((shot) => {
       if (shot.startDistance === null) return false
+      if (!shot.strike_quality) return false
       if (minDistance !== null && shot.startDistance < minDistance) return false
       if (maxDistance !== null && shot.startDistance > maxDistance) return false
       if (appliedFilters.lie !== "all" && shot.lie !== appliedFilters.lie) return false
+      if (
+        appliedFilters.strike !== "all" &&
+        shot.strike_quality !== appliedFilters.strike
+      ) {
+        return false
+      }
       return true
     })
   }, [appliedFilters, shotRows])
 
   const summary = useMemo(() => summarizeShots(filteredShots), [filteredShots])
 
-  const accuracySummary = useMemo(() => {
-    const playedHoles = holes.filter((hole) => !hole.skipped)
-    const fairwayEligible = playedHoles.filter((hole) => Number(hole.par) > 3)
-    const fairwayHits = fairwayEligible.filter((hole) => hole.fairway === true).length
-    const girEligible = playedHoles.filter((hole) => Number.isFinite(Number(hole.par)))
-    const girHits = girEligible.filter((hole) => hole.gir === true).length
+  const strikeBreakdown = useMemo(() => {
+    const values = ["poor", "ok", "pure"]
+    return values.map((strike) => ({
+      label: strike.toUpperCase(),
+      ...summarizeShots(filteredShots.filter((shot) => shot.strike_quality === strike)),
+    }))
+  }, [filteredShots])
 
-    return {
-      fairwayPct:
-        fairwayEligible.length > 0 ? (fairwayHits / fairwayEligible.length) * 100 : null,
-      girPct: girEligible.length > 0 ? (girHits / girEligible.length) * 100 : null,
-      avgEndDistance: summary.avgEndDistance,
-    }
-  }, [holes, summary.avgEndDistance])
+  const lieBreakdown = useMemo(() => {
+    const lies = ["Tee", "Fairway", "Rough", "Sand", "Recovery", "Green"]
+    return lies.map((lie) => ({
+      label: lie,
+      ...summarizeShots(filteredShots.filter((shot) => shot.lie === lie)),
+    }))
+  }, [filteredShots])
 
   const filterSummary = [
     `Period: ${appliedFilters.startDate || "any"} - ${appliedFilters.endDate || "any"}`,
     `Course: ${getCourseLabel(courses, appliedFilters.courseId)}`,
     `Distance: ${getDistanceLabel(appliedFilters)}`,
     `Lie: ${appliedFilters.lie === "all" ? "all" : appliedFilters.lie}`,
+    `Strike: ${
+      appliedFilters.strike === "all" ? "all" : appliedFilters.strike.toUpperCase()
+    }`,
     `Tag: ${appliedFilters.tagFilter || "all"}`,
   ]
 
@@ -149,7 +150,7 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
     <div style={styles.fixedScreen}>
       <div style={styles.fixedTopSection}>
         <div style={styles.sectionCardCompact}>
-          <h1 style={styles.pageTitle}>Analytics</h1>
+          <h1 style={styles.pageTitle}>Ball Striking</h1>
           <div style={styles.screenStepPills}>
             {pages.map((label, index) => (
               <button
@@ -189,14 +190,20 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
             availableTags={availableTags}
             loading={loading}
             onApply={() => setAppliedFilters(draftFilters)}
-            statusText={`Showing ${filteredShots.length} shots from ${rounds.length} rounds.`}
+            statusText={`Showing ${filteredShots.length} rated shots from ${rounds.length} rounds.`}
+            showStrikeFilter
           />
         )}
 
         {page === 1 && (
           <div style={styles.sectionCardCompact}>
             <div style={styles.statsGrid}>
-              <MetricCard label="Shots" value={summary.count} styles={styles} />
+              <MetricCard label="Rated shots" value={filteredShots.length} styles={styles} />
+              <MetricCard
+                label="Pure rate"
+                value={formatNumber(summary.pureRate, 1, "%")}
+                styles={styles}
+              />
               <MetricCard
                 label="Avg SG"
                 value={formatNumber(summary.avgSg)}
@@ -213,23 +220,32 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
 
         {page === 2 && (
           <div style={styles.sectionCardCompact}>
-            <h2 style={styles.sectionTitle}>Accuracy</h2>
-            <div style={styles.statsGrid}>
-              <MetricCard
-                label="Fairway hit %"
-                value={formatNumber(accuracySummary.fairwayPct, 1, "%")}
-                styles={styles}
-              />
-              <MetricCard
-                label="GIR %"
-                value={formatNumber(accuracySummary.girPct, 1, "%")}
-                styles={styles}
-              />
-              <MetricCard
-                label="Distance to flag after shot"
-                value={formatNumber(accuracySummary.avgEndDistance, 1, " m")}
-                styles={styles}
-              />
+            <h2 style={styles.sectionTitle}>By Strike Rating</h2>
+            <div style={styles.analyticsTable}>
+              {strikeBreakdown.map((row) => (
+                <div key={row.label} style={styles.analyticsTableRow}>
+                  <strong>{row.label}</strong>
+                  <span>{row.count} shots</span>
+                  <span>{formatNumber(row.avgSg)} SG</span>
+                  <span>{formatNumber(row.positivePct, 1, "%")} positive</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {page === 3 && (
+          <div style={styles.sectionCardCompact}>
+            <h2 style={styles.sectionTitle}>By Lie</h2>
+            <div style={styles.analyticsTable}>
+              {lieBreakdown.map((row) => (
+                <div key={row.label} style={styles.analyticsTableRow}>
+                  <strong>{row.label}</strong>
+                  <span>{row.count} shots</span>
+                  <span>{formatNumber(row.avgSg)} SG</span>
+                  <span>{formatNumber(row.pureRate, 1, "%")} pure</span>
+                </div>
+              ))}
             </div>
           </div>
         )}

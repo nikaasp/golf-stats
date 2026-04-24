@@ -256,40 +256,56 @@ export function buildMissPatternByCategoryFromShots(shots = []) {
   return grouped
 }
 
-export function buildScoringTimeline(rounds = [], holes = []) {
+export function buildScoringTimeline(rounds = [], holes = [], shots = []) {
   const holesByRound = {}
+  const shotsByRoundAndHole = {}
 
   for (const hole of holes) {
     if (!holesByRound[hole.round_id]) holesByRound[hole.round_id] = []
     holesByRound[hole.round_id].push(hole)
   }
 
+  for (const shot of shots) {
+    if (!shotsByRoundAndHole[shot.round_id]) shotsByRoundAndHole[shot.round_id] = {}
+    if (!shotsByRoundAndHole[shot.round_id][shot.hole_number]) {
+      shotsByRoundAndHole[shot.round_id][shot.hole_number] = []
+    }
+    shotsByRoundAndHole[shot.round_id][shot.hole_number].push(shot)
+  }
+
   return sortRoundsChronologically(rounds).map((round) => {
     const roundHoles = (holesByRound[round.id] || []).filter((h) => !h.skipped)
     let penaltyStrokes = 0
     let penaltyHoles = 0
-    let onePuttHoles = 0
-    let threePuttHoles = 0
     let scrambleOpp = 0
     let scrambleSuccess = 0
     let upDownOpp = 0
     let upDownSuccess = 0
+    let sandSaveOpp = 0
+    let sandSaveSuccess = 0
 
     for (const hole of roundHoles) {
       const penalty = Number(hole.penalty || 0)
       const putts = Number(hole.putts)
       const par = Number(hole.par)
       const score = Number(hole.score)
+      const holeShots = shotsByRoundAndHole[round.id]?.[hole.hole_number] || []
+      const hasSandShot = holeShots.some(
+        (shot) => shot.sg_category === "Short Game + Sand" || shot.sg_category === "Approach + Sand"
+      )
       penaltyStrokes += penalty
       if (penalty > 0) penaltyHoles += 1
-      if (putts === 1) onePuttHoles += 1
-      if (putts >= 3) threePuttHoles += 1
 
       if (Number.isFinite(par) && hole.gir === false) {
         scrambleOpp += 1
         upDownOpp += 1
         if (Number.isFinite(score) && score <= par) scrambleSuccess += 1
         if (Number.isFinite(putts) && putts <= 1) upDownSuccess += 1
+      }
+
+      if (Number.isFinite(par) && Number.isFinite(score) && hasSandShot) {
+        sandSaveOpp += 1
+        if (score <= par) sandSaveSuccess += 1
       }
     }
 
@@ -301,11 +317,194 @@ export function buildScoringTimeline(rounds = [], holes = []) {
       course: round.course,
       penaltyStrokes,
       penaltyHoles,
-      onePuttPct: pct(onePuttHoles, roundHoles.length),
-      threePuttPct: pct(threePuttHoles, roundHoles.length),
       scramblePct: pct(scrambleSuccess, scrambleOpp),
       upDownPct: pct(upDownSuccess, upDownOpp),
+      sandSavePct: pct(sandSaveSuccess, sandSaveOpp),
     }
+  })
+}
+
+export function buildPuttingSplitTimeline(rounds = [], holes = []) {
+  const holesByRound = {}
+
+  for (const hole of holes) {
+    if (!holesByRound[hole.round_id]) holesByRound[hole.round_id] = []
+    holesByRound[hole.round_id].push(hole)
+  }
+
+  return sortRoundsChronologically(rounds).map((round) => {
+    const roundHoles = (holesByRound[round.id] || []).filter((h) => !h.skipped)
+    let onePuttHoles = 0
+    let twoPuttHoles = 0
+    let threePlusPuttHoles = 0
+    let puttHoles = 0
+
+    for (const hole of roundHoles) {
+      const putts = Number(hole.putts)
+      if (!Number.isFinite(putts)) continue
+
+      puttHoles += 1
+      if (putts === 1) onePuttHoles += 1
+      if (putts === 2) twoPuttHoles += 1
+      if (putts >= 3) threePlusPuttHoles += 1
+    }
+
+    const pct = (hits) => (puttHoles > 0 ? (hits / puttHoles) * 100 : null)
+
+    return {
+      round_id: round.id,
+      date: round.date,
+      course: round.course,
+      onePuttPct: pct(onePuttHoles),
+      twoPuttPct: pct(twoPuttHoles),
+      threePlusPuttPct: pct(threePlusPuttHoles),
+    }
+  })
+}
+
+export function buildOffTeeTimeline(rounds = [], holes = [], shots = []) {
+  const holesByRoundAndNumber = {}
+  const shotsByRoundAndHole = {}
+
+  for (const hole of holes) {
+    if (!holesByRoundAndNumber[hole.round_id]) holesByRoundAndNumber[hole.round_id] = {}
+    holesByRoundAndNumber[hole.round_id][hole.hole_number] = hole
+  }
+
+  for (const shot of shots) {
+    if (!shotsByRoundAndHole[shot.round_id]) shotsByRoundAndHole[shot.round_id] = {}
+    if (!shotsByRoundAndHole[shot.round_id][shot.hole_number]) {
+      shotsByRoundAndHole[shot.round_id][shot.hole_number] = []
+    }
+    shotsByRoundAndHole[shot.round_id][shot.hole_number].push(shot)
+  }
+
+  return sortRoundsChronologically(rounds).map((round) => {
+    const holeMap = holesByRoundAndNumber[round.id] || {}
+    const holeGroups = shotsByRoundAndHole[round.id] || {}
+    const driveDistances = []
+    const positiveByPar = {
+      3: { hits: 0, opps: 0 },
+      4: { hits: 0, opps: 0 },
+      5: { hits: 0, opps: 0 },
+    }
+
+    for (const [holeNumber, holeShots] of Object.entries(holeGroups)) {
+      const hole = holeMap[holeNumber]
+      const par = Number(hole?.par)
+      const sortedShots = [...holeShots].sort((a, b) => Number(a.shot_number) - Number(b.shot_number))
+      const teeShot = sortedShots.find((shot) => shot.sg_category === "Tee")
+      if (!teeShot) continue
+
+      const sg = Number(teeShot.strokes_gained)
+      if (Number.isFinite(par) && positiveByPar[par] && Number.isFinite(sg)) {
+        positiveByPar[par].opps += 1
+        if (sg > 0) positiveByPar[par].hits += 1
+      }
+
+      if ((par === 4 || par === 5) && sortedShots.length >= 2) {
+        const startDistance = Number(sortedShots[0].distance_to_flag)
+        const nextDistance = Number(sortedShots[1].distance_to_flag)
+        if (Number.isFinite(startDistance) && Number.isFinite(nextDistance)) {
+          driveDistances.push(Math.max(0, startDistance - nextDistance))
+        }
+      }
+    }
+
+    const avgDriveDistance =
+      driveDistances.length > 0
+        ? driveDistances.reduce((sum, value) => sum + value, 0) / driveDistances.length
+        : null
+
+    const pct = (bucket) => (bucket.opps > 0 ? (bucket.hits / bucket.opps) * 100 : null)
+
+    return {
+      round_id: round.id,
+      date: round.date,
+      course: round.course,
+      avgDriveDistance,
+      teePositivePar3Pct: pct(positiveByPar[3]),
+      teePositivePar4Pct: pct(positiveByPar[4]),
+      teePositivePar5Pct: pct(positiveByPar[5]),
+    }
+  })
+}
+
+export function buildApproachShortGameTimeline(rounds = [], shots = []) {
+  const bands = [
+    { key: "band0_50", min: 0, max: 50, label: "0-50 m" },
+    { key: "band50_100", min: 50, max: 100, label: "50-100 m" },
+    { key: "band100_150", min: 100, max: 150, label: "100-150 m" },
+    { key: "band150_200", min: 150, max: 200, label: "150-200 m" },
+    { key: "band200Plus", min: 200, max: Infinity, label: "200+ m" },
+  ]
+
+  const shotsByRoundAndHole = {}
+
+  for (const shot of shots) {
+    if (!shotsByRoundAndHole[shot.round_id]) shotsByRoundAndHole[shot.round_id] = {}
+    if (!shotsByRoundAndHole[shot.round_id][shot.hole_number]) {
+      shotsByRoundAndHole[shot.round_id][shot.hole_number] = []
+    }
+    shotsByRoundAndHole[shot.round_id][shot.hole_number].push(shot)
+  }
+
+  return sortRoundsChronologically(rounds).map((round) => {
+    const holeGroups = shotsByRoundAndHole[round.id] || {}
+    const bandBuckets = Object.fromEntries(
+      bands.map((band) => [
+        band.key,
+        { proximitySum: 0, proximityCount: 0, greenHits: 0, attempts: 0 },
+      ])
+    )
+
+    for (const holeShots of Object.values(holeGroups)) {
+      const sortedShots = [...holeShots].sort((a, b) => Number(a.shot_number) - Number(b.shot_number))
+
+      sortedShots.forEach((shot, index) => {
+        if (
+          !String(shot.sg_category || "").startsWith("Approach") &&
+          !String(shot.sg_category || "").startsWith("Short Game")
+        ) {
+          return
+        }
+
+        const startDistance = Number(shot.distance_to_flag)
+        if (!Number.isFinite(startDistance)) return
+
+        const band = bands.find((item) => startDistance >= item.min && startDistance < item.max)
+        if (!band) return
+
+        const nextShot = sortedShots[index + 1] || null
+        const bucket = bandBuckets[band.key]
+        bucket.attempts += 1
+
+        if (nextShot?.lie === "Green") {
+          bucket.greenHits += 1
+          const endDistance = Number(nextShot.distance_to_flag)
+          if (Number.isFinite(endDistance)) {
+            bucket.proximitySum += endDistance
+            bucket.proximityCount += 1
+          }
+        }
+      })
+    }
+
+    const row = {
+      round_id: round.id,
+      date: round.date,
+      course: round.course,
+    }
+
+    bands.forEach((band) => {
+      const bucket = bandBuckets[band.key]
+      row[`${band.key}Proximity`] =
+        bucket.proximityCount > 0 ? bucket.proximitySum / bucket.proximityCount : null
+      row[`${band.key}GreenPct`] =
+        bucket.attempts > 0 ? (bucket.greenHits / bucket.attempts) * 100 : null
+    })
+
+    return row
   })
 }
 
@@ -415,7 +614,16 @@ export function buildRoundHoleStats(holes = [], shots = []) {
       }, 0)
 
       const firstPutt = holeShots.find((shot) => shot.lie === "Green")
+      const firstPuttIndex = holeShots.findIndex((shot) => shot.lie === "Green")
       const firstPuttDistance = Number(firstPutt?.distance_to_flag)
+      const nextAfterFirstPutt =
+        firstPuttIndex >= 0 ? holeShots[firstPuttIndex + 1] || null : null
+      const firstPuttLeaveDistance =
+        firstPuttIndex === -1
+          ? null
+          : nextAfterFirstPutt?.lie === "Green"
+          ? Number(nextAfterFirstPutt.distance_to_flag)
+          : 0
       const missCount = holeShots.filter((shot) => shot.miss_pattern).length
       const penalty = Number(hole.penalty || 0)
       const putts = Number(hole.putts)
@@ -439,6 +647,9 @@ export function buildRoundHoleStats(holes = [], shots = []) {
         putts: Number.isFinite(Number(hole.putts)) ? Number(hole.putts) : null,
         firstPuttDistance: Number.isFinite(firstPuttDistance)
           ? firstPuttDistance
+          : null,
+        firstPuttLeaveDistance: Number.isFinite(firstPuttLeaveDistance)
+          ? firstPuttLeaveDistance
           : null,
         firstPuttOnGir:
           gir === 1 && Number.isFinite(firstPuttDistance) ? firstPuttDistance : null,

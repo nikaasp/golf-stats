@@ -2,43 +2,62 @@ import { useMemo, useState } from "react"
 import StatCard from "./StatCard"
 import Scorecard from "./Scorecard"
 import HoleValueChart from "./HoleValueChart"
-import MissPatternBarChart from "./MissPatternBarChart"
 import ReviewHoleEditor from "./ReviewHoleEditor"
+import RoundTagsEditor from "./RoundTagsEditor"
 import { formatToPar } from "../utils/golfFormatters"
-import {
-  buildMissPatternByCategoryFromShots,
-  buildRoundHoleStats,
-} from "../utils/analyticsTransforms"
-import { SG_CATEGORY_LABELS } from "../utils/sgConfig"
-
-function normalizeTagInput(value) {
-  return Array.from(
-    new Set(
-      String(value || "")
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-    )
-  )
-}
-
-function sumMissCounts(grouped = {}) {
-  return Object.values(grouped).reduce((acc, counts) => {
-    for (const [key, value] of Object.entries(counts || {})) {
-      acc[key] = Number(acc[key] || 0) + Number(value || 0)
-    }
-    return acc
-  }, {})
-}
-
-function countMisses(counts = {}) {
-  return Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0)
-}
+import { buildRoundHoleStats } from "../utils/analyticsTransforms"
 
 function formatBooleanResult(value) {
   if (value === 1) return "Hit"
   if (value === 0) return "Miss"
   return "-"
+}
+
+function formatScoreToPar(value) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return "-"
+  if (numeric === 0) return "E"
+  return numeric > 0 ? `+${numeric}` : String(numeric)
+}
+
+function buildApproachBandLieCounts(shots = []) {
+  const bands = [
+    { label: "0-50 m", min: 0, max: 50 },
+    { label: "50-100 m", min: 50, max: 100 },
+    { label: "100-150 m", min: 100, max: 150 },
+    { label: "150-200 m", min: 150, max: 200 },
+    { label: "200+ m", min: 200, max: Infinity },
+  ]
+
+  const rows = bands.map((band) => ({
+    band: band.label,
+    Fairway: 0,
+    Rough: 0,
+    Sand: 0,
+    Recovery: 0,
+  }))
+
+  shots.forEach((shot) => {
+    const category = String(shot.sg_category || "")
+    if (!category.startsWith("Approach") && !category.startsWith("Short Game")) return
+
+    const distance = Number(shot.distance_to_flag)
+    if (!Number.isFinite(distance)) return
+
+    const row = rows.find((item, index) => {
+      const band = bands[index]
+      return distance >= band.min && distance < band.max
+    })
+    if (!row) return
+
+    const lie = ["Fairway", "Rough", "Sand", "Recovery"].includes(shot.lie)
+      ? shot.lie
+      : null
+    if (!lie) return
+    row[lie] += 1
+  })
+
+  return rows
 }
 
 export default function ReviewRoundScreen({
@@ -47,6 +66,7 @@ export default function ReviewRoundScreen({
   selectedReviewHoles = [],
   reviewSummary,
   updateRoundTags,
+  availableTags = [],
   deleteRound,
   saveReviewHoleEdits,
   deleteReviewHole,
@@ -55,20 +75,14 @@ export default function ReviewRoundScreen({
   styles,
 }) {
   const [page, setPage] = useState(0)
-  const [missChartIndex, setMissChartIndex] = useState(0)
   const [editingHole, setEditingHole] = useState(null)
-  const [tagInput, setTagInput] = useState(() => (selectedReviewRound?.tags || []).join(", "))
   const pages = [
     "Stats",
     "Score",
     "SG",
     "Accuracy",
     "Approach",
-    "Short",
     "Putting",
-    "1st Putt",
-    "Mistakes",
-    "Misses",
     "Tags",
   ]
 
@@ -89,34 +103,10 @@ export default function ReviewRoundScreen({
         ).toFixed(1)
       : "-"
 
-  const missPatternCharts = useMemo(() => {
-    const grouped = buildMissPatternByCategoryFromShots(selectedReviewShots)
-    const overallCounts = sumMissCounts(grouped)
-
-    const categoryCharts = Object.entries(grouped)
-      .map(([categoryKey, counts]) => ({
-        key: categoryKey,
-        title: SG_CATEGORY_LABELS[categoryKey] || categoryKey,
-        counts,
-        total: countMisses(counts),
-      }))
-      .filter((chart) => chart.total > 0)
-
-    return [
-      {
-        key: "overall",
-        title: "All Misses",
-        counts: overallCounts,
-        total: countMisses(overallCounts),
-      },
-      ...categoryCharts,
-    ].filter((chart) => chart.total > 0)
-  }, [selectedReviewShots])
-
-  const activeMissChart =
-    missPatternCharts[
-      Math.min(Math.max(0, missChartIndex - 1), Math.max(0, missPatternCharts.length - 1))
-    ]
+  const approachBandLieCounts = useMemo(
+    () => buildApproachBandLieCounts(selectedReviewShots),
+    [selectedReviewShots]
+  )
 
   const editingHoleShots = editingHole
     ? selectedReviewShots.filter(
@@ -276,167 +266,79 @@ export default function ReviewRoundScreen({
                 valueFormatter={formatBooleanResult}
               />
             </div>
+            <div style={styles.sectionCardCompact}>
+              <HoleValueChart
+                title="Score vs Par by Hole"
+                data={holeStats}
+                dataKey="toPar"
+                type="bar"
+                color="#2563eb"
+                valueFormatter={formatScoreToPar}
+              />
+            </div>
           </div>
         )}
 
         {page === 4 && (
-          <div style={styles.sectionCardCompact}>
-            <h2 style={styles.sectionTitle}>Approach Proximity</h2>
-            <div style={styles.statsGrid}>
-              {Object.entries(reviewSummary.approachProximityBands || {}).map(
-                ([band, value]) => (
-                  <StatCard
-                    key={band}
-                    label={`${band} m`}
-                    value={value === "-" ? "-" : `${value} m`}
-                    styles={styles}
-                  />
-                )
-              )}
-              <StatCard
-                label="1st Putt GIR"
-                value={
-                  reviewSummary.avgFirstPuttOnGir === "-"
-                    ? "-"
-                    : `${reviewSummary.avgFirstPuttOnGir} m`
-                }
-                styles={styles}
+          <div style={styles.fixedChartGrid}>
+            <div style={styles.sectionCardCompact}>
+              <HoleValueChart
+                title="Approach Accuracy by Hole"
+                data={holeStats}
+                dataKey="firstPuttDistance"
+                color="#0f766e"
+                valueFormatter={(value) => `${Number(value).toFixed(1)} m`}
               />
+            </div>
+            <div style={styles.sectionCardCompact}>
+              <h2 style={styles.sectionTitle}>Approach Distance Bands by Lie</h2>
+              <div style={styles.analyticsTable}>
+                {approachBandLieCounts.map((row) => (
+                  <div key={row.band} style={styles.analyticsTableRow}>
+                    <strong>{row.band}</strong>
+                    <span>FW {row.Fairway}</span>
+                    <span>RGH {row.Rough}</span>
+                    <span>SND {row.Sand}</span>
+                    <span>REC {row.Recovery}</span>
+                    <span>Total {row.Fairway + row.Rough + row.Sand + row.Recovery}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
         {page === 5 && (
-          <div style={styles.sectionCardCompact}>
-            <HoleValueChart
-              title="Scrambling by Hole"
-              data={holeStats}
-              dataKey="scramble"
-              type="bar"
-              color="#16a34a"
-              domain={[0, 1]}
-              valueFormatter={(value) => (Number(value) === 1 ? "Saved par" : "No save")}
-            />
+          <div style={styles.fixedChartGrid}>
+            <div style={styles.sectionCardCompact}>
+              <HoleValueChart
+                title="Putts by Hole"
+                data={holeStats}
+                dataKey="putts"
+                type="bar"
+                color="#803c87"
+              />
+            </div>
+            <div style={styles.sectionCardCompact}>
+              <HoleValueChart
+                title="1st Putt Accuracy by Hole"
+                data={holeStats}
+                dataKey="firstPuttLeaveDistance"
+                color="#0f766e"
+                valueFormatter={(value) => `${Number(value).toFixed(1)} m`}
+              />
+            </div>
           </div>
         )}
 
         {page === 6 && (
           <div style={styles.sectionCardCompact}>
-            <HoleValueChart
-              title="Putts by Hole"
-              data={holeStats}
-              dataKey="putts"
-              type="bar"
-              color="#803c87"
+            <RoundTagsEditor
+              initialTags={selectedReviewRound?.tags || []}
+              availableTags={availableTags}
+              onSave={(tags) => updateRoundTags(selectedReviewRound?.id, tags)}
+              styles={styles}
             />
-          </div>
-        )}
-
-        {page === 7 && (
-          <div style={styles.sectionCardCompact}>
-            <HoleValueChart
-              title="1st Putt Distance by Hole"
-              data={holeStats}
-              dataKey="firstPuttDistance"
-              color="#0f766e"
-              valueFormatter={(value) => `${Number(value).toFixed(1)} m`}
-            />
-          </div>
-        )}
-
-        {page === 8 && (
-          <div style={styles.fixedChartGrid}>
-            <div style={styles.sectionCardCompact}>
-              <HoleValueChart
-                title="Penalty Strokes by Hole"
-                data={holeStats}
-                dataKey="penalty"
-                type="bar"
-                color="#dc2626"
-              />
-            </div>
-            <div style={styles.sectionCardCompact}>
-              <HoleValueChart
-                title="3-Putts by Hole"
-                data={holeStats}
-                dataKey="threePutt"
-                type="bar"
-                color="#f97316"
-                domain={[0, 1]}
-                valueFormatter={(value) => (Number(value) === 1 ? "3-putt" : "No")}
-              />
-            </div>
-          </div>
-        )}
-
-        {page === 9 && (
-          <div style={styles.sectionCardCompact}>
-            {missPatternCharts.length === 0 ? (
-              <p style={styles.mutedText}>No miss pattern data for this round.</p>
-            ) : (
-              <>
-                <div style={styles.compactChipWrap}>
-                  <button
-                    type="button"
-                    style={{
-                      ...styles.screenStepPill,
-                      ...(missChartIndex === 0 ? styles.screenStepPillActive : {}),
-                    }}
-                    onClick={() => setMissChartIndex(0)}
-                  >
-                    By Hole
-                  </button>
-                  {missPatternCharts.map((chart, index) => (
-                    <button
-                      key={chart.key}
-                      type="button"
-                      style={{
-                        ...styles.screenStepPill,
-                        ...(index + 1 === missChartIndex ? styles.screenStepPillActive : {}),
-                      }}
-                      onClick={() => setMissChartIndex(index + 1)}
-                    >
-                      {chart.title}
-                    </button>
-                  ))}
-                </div>
-                {missChartIndex === 0 ? (
-                  <HoleValueChart
-                    title="Misses Logged by Hole"
-                    data={holeStats}
-                    dataKey="missCount"
-                    type="bar"
-                    color="#f97316"
-                  />
-                ) : (
-                  <MissPatternBarChart
-                    title={activeMissChart?.title || "Miss Patterns"}
-                    counts={activeMissChart?.counts}
-                    styles={styles}
-                  />
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {page === 10 && (
-          <div style={styles.sectionCardCompact}>
-            <label style={styles.label}>Round tags</label>
-            <input
-              style={styles.inputCompact}
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              placeholder="rain, windy, casual"
-            />
-            <button
-              style={styles.primaryButton}
-              onClick={() => updateRoundTags(selectedReviewRound?.id, normalizeTagInput(tagInput))}
-              disabled={!selectedReviewRound?.id}
-            >
-              Save Tags
-            </button>
 
             <button
               style={styles.deleteRoundButtonLarge}

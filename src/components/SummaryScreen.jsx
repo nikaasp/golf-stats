@@ -1,19 +1,24 @@
 import { useState } from "react"
 import StatCard from "./StatCard"
 import Scorecard from "./Scorecard"
+import RoundTagsEditor from "./RoundTagsEditor"
 import { formatToPar } from "../utils/golfFormatters"
 
 export default function SummaryScreen({
+  roundId,
   course,
   date,
   summary,
   sgSummary,
+  roundTags = [],
+  availableTags = [],
+  updateRoundTags,
   goHomeAndReset,
   styles,
 }) {
   const [page, setPage] = useState(0)
 
-  const pages = ["Overview", "SG", "Scorecard"]
+  const pages = ["Overview", "SG", "Scorecard", "Tags"]
 
   const formatStrokesGained = (value) => {
     if (value === null || value === undefined || value === "") return "-"
@@ -116,6 +121,17 @@ export default function SummaryScreen({
           <div style={styles.sectionCardCompact}>
             <h2 style={styles.sectionTitle}>Scorecard</h2>
             <Scorecard holes={summary.holes} styles={styles} />
+          </div>
+        )}
+
+        {page === 3 && (
+          <div style={styles.sectionCardCompact}>
+            <RoundTagsEditor
+              initialTags={roundTags}
+              availableTags={availableTags}
+              onSave={(tags) => updateRoundTags(roundId, tags)}
+              styles={styles}
+            />
           </div>
         )}
       </div>

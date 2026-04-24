@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import DistancePicker from "./DistancePicker"
+import { getDefaultLieForShot } from "../utils/analytics"
 
 const LIE_OPTIONS = [
   { value: "Tee", color: "#d6eeca", border: "#656565", text: "#828282" },
@@ -41,6 +42,7 @@ function getShotTypeLabel(index, lie) {
 
 export default function ShotCard({
   shot,
+  previousShot,
   index,
   shotCount,
   active,
@@ -58,9 +60,18 @@ export default function ShotCard({
   useEffect(() => {
     const isFirstShot = index === 0
     const holeLengthNumber = Number(holeLength)
+    const defaultLie = getDefaultLieForShot(index + 1)
 
     if (isFirstShot && !shot.lie) {
       updateShot(index, "lie", "Tee")
+    }
+
+    if (
+      !isFirstShot &&
+      previousShot?.lie === "Green" &&
+      (!shot.lie || shot.lie === defaultLie)
+    ) {
+      updateShot(index, "lie", "Green")
     }
 
     if (
@@ -71,7 +82,7 @@ export default function ShotCard({
     ) {
       updateShot(index, "distance_to_flag", holeLengthNumber)
     }
-  }, [index, holeLength, shot.distance_to_flag, shot.lie, updateShot])
+  }, [index, holeLength, previousShot?.lie, shot.distance_to_flag, shot.lie, updateShot])
 
   const shotTypeLabel = useMemo(
     () => getShotTypeLabel(index, shot.lie),

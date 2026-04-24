@@ -69,6 +69,7 @@ export default function InRoundScreen({
               <ShotCard
                 key={`${hole}-${activeShotIndex}-${setupResetKey}`}
                 shot={activeShot}
+                previousShot={activeShotIndex > 0 ? shots?.[activeShotIndex - 1] || null : null}
                 index={activeShotIndex}
                 shotCount={shots?.length || 1}
                 active

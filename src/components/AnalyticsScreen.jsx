@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import SgLineChart from "./SgLineChart"
 import PercentLineChart from "./PercentLineChart"
-import PuttsLineChart from "./PuttsLineChart"
-import FirstPuttDistanceLineChart from "./FirstPuttDistanceLineChart"
-import MissPatternBarChart from "./MissPatternBarChart"
 import RoundFilters from "./RoundFilters"
 import TrendMetricLineChart from "./TrendMetricLineChart"
 import {
@@ -12,39 +9,83 @@ import {
   fetchHolesForRoundIds,
 } from "../services/analyticsService"
 import {
-  buildSgTimeline,
   buildAccuracyTimeline,
-  buildPuttsTimeline,
+  buildApproachShortGameTimeline,
+  buildOffTeeTimeline,
+  buildPuttingSplitTimeline,
   buildScoringTimeline,
-  buildApproachProximityBandSummary,
-  buildFirstPuttDistanceTimeline,
-  buildMissPatternByCategoryFromShots,
+  buildSgTimeline,
 } from "../utils/analyticsTransforms"
-import { SG_CATEGORY_LABELS } from "../utils/sgConfig"
 import {
+  collectAvailableTags,
   hydrateRoundsWithStoredTags,
   roundMatchesTagFilter,
 } from "../utils/roundTags"
 
-function sumMissCounts(grouped = {}) {
-  return Object.values(grouped).reduce((acc, counts) => {
-    for (const [key, value] of Object.entries(counts || {})) {
-      acc[key] = Number(acc[key] || 0) + Number(value || 0)
-    }
-    return acc
-  }, {})
+function getCourseLabel(courses, courseId) {
+  if (!courseId || courseId === "all") return "All courses"
+  return courses.find((course) => String(course.id) === String(courseId))?.name || "Course"
 }
 
-function countMisses(counts = {}) {
-  return Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0)
+function formatValue(value, suffix = "", decimals = 1) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return "-"
+  return `${numeric.toFixed(decimals)}${suffix}`
+}
+
+function findLatestFinite(data = [], key) {
+  for (let i = data.length - 1; i >= 0; i -= 1) {
+    const value = Number(data[i]?.[key])
+    if (Number.isFinite(value)) return value
+  }
+  return null
+}
+
+function findSlopeDirection(data = [], key) {
+  const values = data
+    .map((row) => Number(row?.[key]))
+    .filter((value) => Number.isFinite(value))
+
+  if (values.length < 2) return null
+  const first = values[0]
+  const last = values[values.length - 1]
+  const delta = last - first
+  if (Math.abs(delta) < 1) return "steady"
+  return delta > 0 ? "up" : "down"
+}
+
+function KeyTakeaways({ items, styles }) {
+  return (
+    <div style={styles.sectionCardCompact}>
+      <h2 style={styles.sectionTitle}>Key Takeaways</h2>
+      <div style={styles.analyticsTable}>
+        {items.map((item) => (
+          <div key={item.title} style={styles.analyticsTableRow}>
+            <strong>{item.title}</strong>
+            <span>{item.value}</span>
+            <span>{item.note}</span>
+            <span>{item.context}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export default function AnalyticsScreen({ courses, styles, goHome }) {
   const today = new Date().toISOString().slice(0, 10)
 
   const [page, setPage] = useState(0)
-  const [missChartIndex, setMissChartIndex] = useState(0)
-  const pages = ["Filter", "SG", "Accuracy", "Putting", "Mistakes", "Approach", "Misses"]
+  const pages = [
+    "Filter",
+    "Takeaways",
+    "SG",
+    "Accuracy",
+    "Mistakes",
+    "Off The Tee",
+    "Approach",
+    "Putting",
+  ]
 
   const [draftStartDate, setDraftStartDate] = useState("")
   const [draftEndDate, setDraftEndDate] = useState(today)
@@ -62,6 +103,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
   const [rounds, setRounds] = useState([])
   const [shots, setShots] = useState([])
   const [holes, setHoles] = useState([])
+  const [availableTags, setAvailableTags] = useState([])
 
   const applyFilters = useCallback(() => {
     setAppliedFilters({
@@ -88,6 +130,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
     }
 
     const taggedRounds = hydrateRoundsWithStoredTags(roundsRes.data || [])
+    setAvailableTags(collectAvailableTags(taggedRounds))
     const filteredRounds = taggedRounds.filter((round) =>
       roundMatchesTagFilter(round, appliedFilters.tagFilter)
     )
@@ -125,94 +168,77 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
     return () => clearTimeout(timerId)
   }, [loadAnalytics])
 
-  const { timeline, slopes } = useMemo(
-    () => buildSgTimeline(rounds, shots),
-    [rounds, shots]
-  )
-
-  const accuracyTimeline = useMemo(
-    () => buildAccuracyTimeline(rounds, holes),
-    [rounds, holes]
-  )
-
-  const puttsTimeline = useMemo(
-    () => buildPuttsTimeline(rounds, holes),
-    [rounds, holes]
-  )
-
-  const firstPuttDistanceTimeline = useMemo(
-    () => buildFirstPuttDistanceTimeline(rounds, shots),
-    [rounds, shots]
-  )
-
+  const { timeline, slopes } = useMemo(() => buildSgTimeline(rounds, shots), [rounds, shots])
+  const accuracyTimeline = useMemo(() => buildAccuracyTimeline(rounds, holes), [rounds, holes])
   const scoringTimeline = useMemo(
-    () => buildScoringTimeline(rounds, holes),
+    () => buildScoringTimeline(rounds, holes, shots),
+    [rounds, holes, shots]
+  )
+  const offTeeTimeline = useMemo(
+    () => buildOffTeeTimeline(rounds, holes, shots),
+    [rounds, holes, shots]
+  )
+  const approachTimeline = useMemo(
+    () => buildApproachShortGameTimeline(rounds, shots),
+    [rounds, shots]
+  )
+  const puttingTimeline = useMemo(
+    () => buildPuttingSplitTimeline(rounds, holes),
     [rounds, holes]
   )
 
-  const approachBandSummary = useMemo(
-    () => buildApproachProximityBandSummary(shots),
-    [shots]
-  )
-
-  const avgPuttsAcrossRounds = useMemo(() => {
-    const values = puttsTimeline
-      .map((row) => Number(row.avgPutts))
-      .filter((value) => Number.isFinite(value))
-
-    if (values.length === 0) return "-"
-    return (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2)
-  }, [puttsTimeline])
-
-  const firstPuttStats = useMemo(() => {
-    const totals = firstPuttDistanceTimeline.reduce(
-      (acc, row) => {
-        const distance = Number(row.avgFirstPuttDistance)
-        const count = Number(row.firstPuttHoleCount || 0)
-
-        if (Number.isFinite(distance) && count > 0) {
-          acc.distance += distance * count
-          acc.count += count
-        }
-
-        return acc
-      },
-      { distance: 0, count: 0 }
-    )
-
-    return {
-      avgDistance:
-        totals.count > 0 ? (totals.distance / totals.count).toFixed(1) : "-",
-      holeCount: totals.count,
-    }
-  }, [firstPuttDistanceTimeline])
-
-  const missPatternCharts = useMemo(() => {
-    const grouped = buildMissPatternByCategoryFromShots(shots)
-    const overallCounts = sumMissCounts(grouped)
-
-    const categoryCharts = Object.entries(grouped)
-      .map(([categoryKey, counts]) => ({
-        key: categoryKey,
-        title: SG_CATEGORY_LABELS[categoryKey] || categoryKey,
-        counts,
-        total: countMisses(counts),
-      }))
-      .filter((chart) => chart.total > 0)
+  const takeaways = useMemo(() => {
+    const latestTotal = findLatestFinite(timeline, "total")
+    const fairwayTrend = findSlopeDirection(accuracyTimeline, "fairwayPct")
+    const latestDrive = findLatestFinite(offTeeTimeline, "avgDriveDistance")
+    const latestOnePutt = findLatestFinite(puttingTimeline, "onePuttPct")
+    const latestMistakes = findLatestFinite(scoringTimeline, "penaltyStrokes")
 
     return [
       {
-        key: "overall",
-        title: "All Misses",
-        counts: overallCounts,
-        total: countMisses(overallCounts),
+        title: "Overall SG",
+        value: formatValue(latestTotal),
+        note:
+          latestTotal == null
+            ? "No SG rounds yet"
+            : latestTotal >= 0
+            ? "Latest round finished positive"
+            : "Latest round finished below baseline",
+        context: "Latest filtered round",
       },
-      ...categoryCharts,
-    ].filter((chart) => chart.total > 0)
-  }, [shots])
+      {
+        title: "Driving",
+        value: formatValue(latestDrive, " m"),
+        note: "Average distance on par 4s and 5s only",
+        context: "Off-the-tee focus",
+      },
+      {
+        title: "Fairway trend",
+        value:
+          fairwayTrend === "up"
+            ? "Improving"
+            : fairwayTrend === "down"
+            ? "Falling"
+            : fairwayTrend === "steady"
+            ? "Stable"
+            : "-",
+        note: "Based on fairway % across filtered rounds",
+        context: "Accuracy",
+      },
+      {
+        title: "Putting",
+        value: formatValue(latestOnePutt, "%"),
+        note: "Latest 1-putt rate",
+        context: formatValue(latestMistakes, " penalties", 0),
+      },
+    ]
+  }, [accuracyTimeline, offTeeTimeline, puttingTimeline, scoringTimeline, timeline])
 
-  const activeMissChart =
-    missPatternCharts[Math.min(missChartIndex, Math.max(0, missPatternCharts.length - 1))]
+  const filterSummary = [
+    `Period: ${appliedFilters.startDate || "any"} - ${appliedFilters.endDate || "any"}`,
+    `Course: ${getCourseLabel(courses, appliedFilters.courseId)}`,
+    `Tag: ${appliedFilters.tagFilter || "all"}`,
+  ]
 
   return (
     <div style={styles.fixedScreen}>
@@ -235,6 +261,17 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
               </button>
             ))}
           </div>
+
+          <div style={styles.analyticsFilterSummaryCard}>
+            <div style={styles.inRoundHeaderTop}>Active filters</div>
+            <div style={styles.analyticsFilterSummary}>
+              {filterSummary.map((item) => (
+                <span key={item} style={styles.analyticsFilterSummaryChip}>
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -252,6 +289,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
               setCourseId={setDraftCourseId}
               tagFilter={draftTagFilter}
               setTagFilter={setDraftTagFilter}
+              availableTags={availableTags}
               onApply={applyFilters}
               loading={loading}
             />
@@ -261,27 +299,13 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
           </div>
         )}
 
-        {page === 1 && <SgLineChart data={timeline} slopes={slopes} styles={styles} />}
+        {page === 1 && <KeyTakeaways items={takeaways} styles={styles} />}
 
-        {page === 2 && (
-          <div style={styles.fixedChartGrid}>
-            <PercentLineChart data={accuracyTimeline} styles={styles} />
-          </div>
-        )}
+        {page === 2 && <SgLineChart data={timeline} slopes={slopes} styles={styles} />}
 
         {page === 3 && (
           <div style={styles.fixedChartGrid}>
-            <div style={styles.puttingStatsGrid}>
-              <div style={styles.compactMetricCard}>
-                <div style={styles.compactMetricValue}>{avgPuttsAcrossRounds}</div>
-                <div style={styles.compactMetricLabel}>Avg putts per round</div>
-              </div>
-              <div style={styles.compactMetricCard}>
-                <div style={styles.compactMetricValue}>{puttsTimeline.length}</div>
-                <div style={styles.compactMetricLabel}>Rounds in filter</div>
-              </div>
-            </div>
-            <PuttsLineChart data={puttsTimeline} styles={styles} />
+            <PercentLineChart data={accuracyTimeline} styles={styles} />
           </div>
         )}
 
@@ -297,7 +321,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
               ]}
             />
             <TrendMetricLineChart
-              title="Scrambling and Putting Rates"
+              title="Scrambling, Up-and-Down, and Sand Save %"
               data={scoringTimeline}
               styles={styles}
               yDomain={[0, 100]}
@@ -305,8 +329,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
               series={[
                 { key: "scramblePct", name: "Scramble %", color: "#16a34a" },
                 { key: "upDownPct", name: "Up/down %", color: "#2563eb" },
-                { key: "threePuttPct", name: "3-putt %", color: "#dc2626" },
-                { key: "onePuttPct", name: "1-putt %", color: "#0f766e" },
+                { key: "sandSavePct", name: "Sand save %", color: "#d97706" },
               ]}
             />
           </div>
@@ -314,72 +337,80 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
 
         {page === 5 && (
           <div style={styles.fixedChartGrid}>
-            <div style={styles.puttingStatsGrid}>
-              <div style={styles.compactMetricCard}>
-                <div style={styles.compactMetricValue}>
-                  {firstPuttStats.avgDistance === "-"
-                    ? "-"
-                    : `${firstPuttStats.avgDistance} m`}
-                </div>
-                <div style={styles.compactMetricLabel}>Avg 1st putt distance</div>
-              </div>
-              <div style={styles.compactMetricCard}>
-                <div style={styles.compactMetricValue}>{firstPuttStats.holeCount}</div>
-                <div style={styles.compactMetricLabel}>Holes with 1st putt</div>
-              </div>
-            </div>
-            <FirstPuttDistanceLineChart
-              data={firstPuttDistanceTimeline}
+            <TrendMetricLineChart
+              title="Average Driving Distance by Round"
+              data={offTeeTimeline}
               styles={styles}
+              valueSuffix=" m"
+              series={[
+                {
+                  key: "avgDriveDistance",
+                  name: "Avg drive distance (par 4s and 5s only)",
+                  color: "#2563eb",
+                },
+              ]}
             />
-            <div style={styles.sectionCardCompact}>
-              <h2 style={styles.sectionTitle}>Approach Proximity Bands</h2>
-              <div style={styles.statsGrid}>
-                {approachBandSummary.map((band) => (
-                  <div key={band.band} style={styles.compactMetricCard}>
-                    <div style={styles.compactMetricValue}>
-                      {band.avgProximity == null
-                        ? "-"
-                        : `${Number(band.avgProximity).toFixed(1)} m`}
-                    </div>
-                    <div style={styles.compactMetricLabel}>
-                      {band.band} m ({band.count})
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <TrendMetricLineChart
+              title="Positive SG Off the Tee by Hole Type"
+              data={offTeeTimeline}
+              styles={styles}
+              yDomain={[0, 100]}
+              valueSuffix="%"
+              series={[
+                { key: "teePositivePar3Pct", name: "Par 3", color: "#16a34a" },
+                { key: "teePositivePar4Pct", name: "Par 4", color: "#2563eb" },
+                { key: "teePositivePar5Pct", name: "Par 5", color: "#7c3aed" },
+              ]}
+            />
           </div>
         )}
 
         {page === 6 && (
-          <div style={styles.sectionCardCompact}>
-            {missPatternCharts.length === 0 ? (
-              <p style={styles.mutedText}>No miss pattern data available.</p>
-            ) : (
-              <>
-                <div style={styles.compactChipWrap}>
-                  {missPatternCharts.map((chart, index) => (
-                    <button
-                      key={chart.key}
-                      type="button"
-                      style={{
-                        ...styles.screenStepPill,
-                        ...(index === missChartIndex ? styles.screenStepPillActive : {}),
-                      }}
-                      onClick={() => setMissChartIndex(index)}
-                    >
-                      {chart.title}
-                    </button>
-                  ))}
-                </div>
-                <MissPatternBarChart
-                  title={activeMissChart?.title || "Miss Patterns"}
-                  counts={activeMissChart?.counts}
-                  styles={styles}
-                />
-              </>
-            )}
+          <div style={styles.fixedChartGrid}>
+            <TrendMetricLineChart
+              title="Average Leave by Distance Band"
+              data={approachTimeline}
+              styles={styles}
+              valueSuffix=" m"
+              series={[
+                { key: "band0_50Proximity", name: "0-50 m", color: "#0f766e" },
+                { key: "band50_100Proximity", name: "50-100 m", color: "#16a34a" },
+                { key: "band100_150Proximity", name: "100-150 m", color: "#2563eb" },
+                { key: "band150_200Proximity", name: "150-200 m", color: "#7c3aed" },
+                { key: "band200PlusProximity", name: "200+ m", color: "#dc2626" },
+              ]}
+            />
+            <TrendMetricLineChart
+              title="Green Hit % by Distance Band"
+              data={approachTimeline}
+              styles={styles}
+              yDomain={[0, 100]}
+              valueSuffix="%"
+              series={[
+                { key: "band0_50GreenPct", name: "0-50 m", color: "#0f766e" },
+                { key: "band50_100GreenPct", name: "50-100 m", color: "#16a34a" },
+                { key: "band100_150GreenPct", name: "100-150 m", color: "#2563eb" },
+                { key: "band150_200GreenPct", name: "150-200 m", color: "#7c3aed" },
+                { key: "band200PlusGreenPct", name: "200+ m", color: "#dc2626" },
+              ]}
+            />
+          </div>
+        )}
+
+        {page === 7 && (
+          <div style={styles.fixedChartGrid}>
+            <TrendMetricLineChart
+              title="Putting Split per Round"
+              data={puttingTimeline}
+              styles={styles}
+              yDomain={[0, 100]}
+              valueSuffix="%"
+              series={[
+                { key: "onePuttPct", name: "1-putt %", color: "#16a34a" },
+                { key: "twoPuttPct", name: "2-putt %", color: "#2563eb" },
+                { key: "threePlusPuttPct", name: "3-putt+ %", color: "#dc2626" },
+              ]}
+            />
           </div>
         )}
       </div>
