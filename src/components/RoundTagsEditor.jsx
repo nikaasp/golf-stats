@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { normalizeRoundTags } from "../utils/roundTags"
 
 function mergeTagsFromInput(value) {
@@ -20,9 +20,16 @@ export default function RoundTagsEditor({
     normalizeRoundTags(initialTags, [...availableTags, ...initialTags])
   )
 
-  useEffect(() => {
+  // Reset the selection only when the incoming tags actually change (e.g. a
+  // different round is opened), not on every render. Keying off the content
+  // signature avoids wiping in-progress edits when unrelated props change and
+  // tolerates fresh-but-equal array props from the parent.
+  const initialSignature = JSON.stringify(normalizeRoundTags(initialTags))
+  const [appliedSignature, setAppliedSignature] = useState(initialSignature)
+  if (initialSignature !== appliedSignature) {
+    setAppliedSignature(initialSignature)
     setSelectedTags(normalizeRoundTags(initialTags, [...availableTags, ...initialTags]))
-  }, [availableTags, initialTags])
+  }
 
   const allKnownTags = useMemo(
     () => normalizeRoundTags([...availableTags, ...selectedTags]).sort((a, b) =>

@@ -1,5 +1,13 @@
 import { clamp } from "./golfFormatters.js"
 
+// Strokes-gained categorization lives in strokesGained.js so there is a single
+// source of truth (it normalizes lie names such as "On green"/"Putting").
+// Re-exported here for backwards compatibility with existing imports.
+export {
+  getShotSgCategory,
+  getSgLookupKeyFromCategory,
+} from "./strokesGained.js"
+
 export function getDefaultLieForShot(shotNumber) {
   return shotNumber === 1 ? "Tee" : "Fairway"
 }
@@ -36,56 +44,6 @@ export function calculateShotModeTotals(shots) {
     shotCount,
     autoPenalty,
     totalScore: shotCount + autoPenalty,
-  }
-}
-
-export function getShotSgCategory({ shot, shotIndex }) {
-  const startDistance = Number(shot.distance_to_flag)
-  const lie = shot.lie || ""
-  const APPROACH_THRESHOLD = 90
-
-  if (lie === "Green") return "Putting"
-  if (shotIndex === 0 && lie === "Tee") return "Tee"
-  if (lie === "Recovery") return "Recovery"
-
-  if (!Number.isFinite(startDistance)) return null
-
-  if (startDistance > APPROACH_THRESHOLD) {
-    if (lie === "Fairway") return "Approach + Fairway"
-    if (lie === "Rough") return "Approach + Rough"
-    if (lie === "Sand") return "Approach + Sand"
-    if (lie === "Tee") return "Tee"
-  }
-
-  if (startDistance <= APPROACH_THRESHOLD) {
-    if (lie === "Fairway") return "Short Game + Fairway"
-    if (lie === "Rough") return "Short Game + Rough"
-    if (lie === "Sand") return "Short Game + Sand"
-    if (lie === "Tee") return "Tee"
-  }
-
-  return null
-}
-
-export function getSgLookupKeyFromCategory(sgCategory) {
-  switch (sgCategory) {
-    case "Tee":
-      return "tee"
-    case "Approach + Fairway":
-    case "Short Game + Fairway":
-      return "fairway"
-    case "Approach + Rough":
-    case "Short Game + Rough":
-      return "rough"
-    case "Approach + Sand":
-    case "Short Game + Sand":
-      return "sand"
-    case "Recovery":
-      return "recovery"
-    case "Putting":
-      return "green"
-    default:
-      return null
   }
 }
 

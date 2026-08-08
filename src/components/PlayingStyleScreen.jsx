@@ -96,9 +96,8 @@ function buildPlayingStyleTimeline(rounds = [], shots = []) {
   })
 }
 
-function buildTakeaways(visibleShots = [], strikeBreakdown = []) {
+function buildTakeaways(visibleShots = []) {
   const ratedShots = visibleShots.filter((shot) => shot.strike_quality)
-  const misses = visibleShots.filter((shot) => shot.miss_pattern)
   const poorMisses = ratedShots.filter(
     (shot) => shot.strike_quality === "poor" && shot.miss_pattern
   ).length
@@ -255,8 +254,8 @@ export default function PlayingStyleScreen({ courses, styles, goHome }) {
   )
 
   const takeaways = useMemo(
-    () => buildTakeaways(visibleShots, strikeBreakdown),
-    [visibleShots, strikeBreakdown]
+    () => buildTakeaways(visibleShots),
+    [visibleShots]
   )
 
   const penaltyBreakdown = useMemo(() => {

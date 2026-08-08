@@ -57,6 +57,16 @@ runTest("categorizes shots by lie and distance bands", () => {
   )
 })
 
+runTest("normalizes green lie aliases to Putting", () => {
+  for (const lie of ["Green", "On green", "Putting"]) {
+    assert.equal(
+      getShotSgCategory({ shot: { lie, distance_to_flag: 5 }, shotIndex: 2 }),
+      "Putting",
+      `expected "${lie}" to categorize as Putting`
+    )
+  }
+})
+
 runTest("evaluates strokes gained across a complete hole", () => {
   const shots = [
     { lie: "Tee", distance_to_flag: 380 },
