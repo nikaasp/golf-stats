@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { useToast } from "./ToastProvider"
 import SgLineChart from "./SgLineChart"
 import PercentLineChart from "./PercentLineChart"
 import RoundFilters from "./RoundFilters"
@@ -73,6 +74,8 @@ function KeyTakeaways({ items, styles }) {
 }
 
 export default function AnalyticsScreen({ courses, styles, goHome }) {
+  const toast = useToast()
+
   const today = new Date().toISOString().slice(0, 10)
 
   const [page, setPage] = useState(0)
@@ -125,7 +128,7 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
 
     if (roundsRes.error) {
       setLoading(false)
-      alert("Could not load trend rounds: " + roundsRes.error.message)
+      toast.error("Could not load trend rounds: " + roundsRes.error.message)
       return
     }
 
@@ -147,18 +150,18 @@ export default function AnalyticsScreen({ courses, styles, goHome }) {
     setLoading(false)
 
     if (shotsRes.error) {
-      alert("Could not load trend shots: " + shotsRes.error.message)
+      toast.error("Could not load trend shots: " + shotsRes.error.message)
       return
     }
 
     if (holesRes.error) {
-      alert("Could not load trend holes: " + holesRes.error.message)
+      toast.error("Could not load trend holes: " + holesRes.error.message)
       return
     }
 
     setShots(shotsRes.data || [])
     setHoles(holesRes.data || [])
-  }, [appliedFilters])
+  }, [appliedFilters, toast])
 
   useEffect(() => {
     const timerId = setTimeout(() => {

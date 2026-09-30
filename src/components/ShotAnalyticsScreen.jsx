@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { useToast } from "./ToastProvider"
 import ShotFiltersCard from "./ShotFiltersCard"
 import {
   fetchRoundsForAnalytics,
@@ -29,6 +30,8 @@ function MetricCard({ label, value, styles }) {
 }
 
 export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
+  const toast = useToast()
+
   const today = new Date().toISOString().slice(0, 10)
   const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -65,7 +68,7 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
 
     if (roundsRes.error) {
       setLoading(false)
-      alert("Could not load analytics rounds: " + roundsRes.error.message)
+      toast.error("Could not load analytics rounds: " + roundsRes.error.message)
       return
     }
 
@@ -83,19 +86,19 @@ export default function ShotAnalyticsScreen({ courses, styles, goHome }) {
     setLoading(false)
 
     if (shotsRes.error) {
-      alert("Could not load analytics shots: " + shotsRes.error.message)
+      toast.error("Could not load analytics shots: " + shotsRes.error.message)
       return
     }
 
     if (holesRes.error) {
-      alert("Could not load analytics holes: " + holesRes.error.message)
+      toast.error("Could not load analytics holes: " + holesRes.error.message)
       return
     }
 
     setRounds(filteredRounds)
     setShots(shotsRes.data || [])
     setHoles(holesRes.data || [])
-  }, [appliedFilters])
+  }, [appliedFilters, toast])
 
   useEffect(() => {
     const timerId = setTimeout(() => {
