@@ -14,6 +14,14 @@ export async function fetchRounds() {
     .order("date", { ascending: false })
 }
 
+export async function updateRoundTags(roundId, tags) {
+  return supabase
+    .from("rounds")
+    .update({ tags })
+    .eq("id", roundId)
+    .select()
+}
+
 export async function fetchRoundBundle(roundId) {
   const [holesRes, shotsRes] = await Promise.all([
     supabase

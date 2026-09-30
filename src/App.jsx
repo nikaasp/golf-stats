@@ -51,6 +51,7 @@ import {
   deleteRoundsByCourseId,
   fetchRoundBundle,
   fetchRounds,
+  updateRoundTags as persistRoundTags,
 } from "./services/roundsService"
 import { fetchShotsForRoundIds } from "./services/analyticsService"
 
@@ -1023,7 +1024,9 @@ function App() {
     return refreshSelectedReviewRound(selectedReviewRound.id)
   }
 
-  function updateRoundTags(roundIdValue, tags) {
+  async function updateRoundTags(roundIdValue, tags) {
+    // Keep localStorage as a graceful fallback so tags keep working even before
+    // the rounds.tags migration is applied (or when Supabase is unavailable).
     setStoredRoundTags(roundIdValue, tags)
     if (roundIdValue === roundId) {
       setSummaryRoundTags(tags)
@@ -1038,6 +1041,22 @@ function App() {
     setSelectedReviewRound((prev) =>
       prev?.id === roundIdValue ? { ...prev, tags } : prev
     )
+
+    if (!supabase) return
+
+    try {
+      const { error } = await persistRoundTags(roundIdValue, tags)
+      if (error) {
+        // The tags column may not exist yet; localStorage already holds them,
+        // so degrade silently rather than surfacing a fatal error.
+        console.warn("Could not sync round tags to Supabase:", error.message)
+      }
+    } catch (error) {
+      console.warn(
+        "Could not sync round tags to Supabase:",
+        error?.message || error
+      )
+    }
   }
 
   function goHomeAndReset() {

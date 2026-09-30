@@ -52,4 +52,8 @@ Then open `http://localhost:5173/dev-mobile-preview.html`. The preview frames th
 
 - The live round flow is currently centered on shot-by-shot entry.
 - Supabase config is loaded from Vite environment variables.
+- Round tags are stored in Supabase (the `rounds.tags` column) with a
+  localStorage fallback, so they sync across devices while still working
+  offline or before the schema change is applied. Apply
+  `supabase/migrations/0001_add_round_tags.sql` in Supabase to add the column.
 - The tests focus on the golf logic in `src/utils`, which is where the most important derived stats live.
