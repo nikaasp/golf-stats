@@ -2052,6 +2052,44 @@ const baseStyles = {
     cursor: "pointer",
     padding: 0,
   },
+
+  distanceStepperRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    width: "100%",
+    maxWidth: "329px",
+    marginLeft: "auto",
+  },
+
+  distanceStepperButton: {
+    width: "48px",
+    height: "39px",
+    borderRadius: "10px",
+    border: "1px solid #d1d5db",
+    background: "#ffffff",
+    fontWeight: 800,
+    fontSize: "20px",
+    lineHeight: 1,
+    cursor: "pointer",
+    padding: 0,
+    flexShrink: 0,
+  },
+
+  distanceStepperInput: {
+    flex: 1,
+    minWidth: 0,
+    border: "none",
+    background: "transparent",
+    textAlign: "center",
+    fontSize: "18px",
+    fontWeight: 800,
+    color: "#1f2937",
+    outline: "none",
+    padding: 0,
+    MozAppearance: "textfield",
+  },
 }
 
 function mergeStyles(base, overrides) {

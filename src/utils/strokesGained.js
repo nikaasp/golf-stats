@@ -10,22 +10,35 @@ function normalizeLie(lie) {
   return value
 }
 
-function getNearestExpected(table, distance) {
+export function getNearestExpected(table, distance) {
   if (!Number.isFinite(distance)) return null
   if (!table || table.length === 0) return null
 
-  let nearest = table[0]
-  let minDiff = Math.abs(distance - table[0].distance)
+  let lo = 0
+  let hi = table.length - 1
 
-  for (const row of table) {
-    const diff = Math.abs(distance - row.distance)
-    if (diff < minDiff) {
-      minDiff = diff
-      nearest = row
+  // SG_TABLE arrays are sorted ascending by distance, so the nearest row is
+  // one of the two that bracket the target. Handle the out-of-range ends first.
+  if (distance <= table[lo].distance) return table[lo].expectedShots
+  if (distance >= table[hi].distance) return table[hi].expectedShots
+
+  // Binary search for the first row whose distance is >= the target.
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1
+    if (table[mid].distance < distance) {
+      lo = mid + 1
+    } else {
+      hi = mid
     }
   }
 
-  return nearest.expectedShots
+  const upper = table[lo]
+  const lower = table[lo - 1]
+  const upperDiff = Math.abs(distance - upper.distance)
+  const lowerDiff = Math.abs(distance - lower.distance)
+
+  // On ties keep the smaller-distance row, matching the original linear scan.
+  return lowerDiff <= upperDiff ? lower.expectedShots : upper.expectedShots
 }
 
 export function getShotSgCategory({ shot, shotIndex }) {

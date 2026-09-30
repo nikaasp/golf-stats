@@ -28,6 +28,8 @@ import {
 
 import { getStyles } from "./utils/styles"
 
+import { useToast } from "./components/ToastProvider"
+
 import {
   evaluateHoleStrokesGained,
   summarizeRoundStrokesGained,
@@ -49,6 +51,7 @@ import {
   deleteRoundsByCourseId,
   fetchRoundBundle,
   fetchRounds,
+  updateRoundTags as persistRoundTags,
 } from "./services/roundsService"
 import { fetchShotsForRoundIds } from "./services/analyticsService"
 
@@ -128,6 +131,8 @@ function ConfigErrorScreen({ message }) {
 }
 
 function App() {
+  const toast = useToast()
+
   const [phoneSize, setPhoneSize] = useState(() => {
     if (typeof window === "undefined") return "large"
     return window.localStorage.getItem("golf-stats-phone-size") === "small"
@@ -173,7 +178,7 @@ function App() {
   const loadRounds = useCallback(async () => {
     const { data, error } = await fetchRounds()
     if (error) {
-      alert("Could not load rounds: " + error.message)
+      toast.error("Could not load rounds: " + error.message)
       return
     }
     const hydratedRounds = hydrateRoundsWithStoredTags(data || [])
@@ -183,22 +188,22 @@ function App() {
     const shotsRes = await fetchShotsForRoundIds(roundIds)
 
     if (shotsRes.error) {
-      alert("Could not load SG trend shots: " + shotsRes.error.message)
+      toast.error("Could not load SG trend shots: " + shotsRes.error.message)
       return
     }
 
     const { timeline } = buildSgTimeline(hydratedRounds, shotsRes.data || [])
     setHomeTrendData(timeline)
-  }, [])
+  }, [toast])
 
   const loadCourses = useCallback(async () => {
     const { data, error } = await fetchCourses()
     if (error) {
-      alert("Could not load courses: " + error.message)
+      toast.error("Could not load courses: " + error.message)
       return
     }
     setCourses(data || [])
-  }, [])
+  }, [toast])
 
 
   useEffect(() => {
@@ -253,11 +258,11 @@ function App() {
     setLoading(false)
 
     if (bundle.holesRes.error) {
-      alert("Could not load holes: " + bundle.holesRes.error.message)
+      toast.error("Could not load holes: " + bundle.holesRes.error.message)
       return
     }
     if (bundle.shotsRes.error) {
-      alert("Could not load shots: " + bundle.shotsRes.error.message)
+      toast.error("Could not load shots: " + bundle.shotsRes.error.message)
       return
     }
 
@@ -285,12 +290,12 @@ function App() {
     const cleaned = String(nextName || "").trim()
 
     if (!courseToRename?.id) {
-      alert("Could not identify the selected course")
+      toast.error("Could not identify the selected course")
       return false
     }
 
     if (!cleaned) {
-      alert("Please enter a course name")
+      toast.error("Please enter a course name")
       return false
     }
 
@@ -301,7 +306,7 @@ function App() {
     )
 
     if (duplicate) {
-      alert("A course with this name already exists")
+      toast.error("A course with this name already exists")
       return false
     }
 
@@ -316,7 +321,7 @@ function App() {
 
     if (courseRes.error) {
       setLoading(false)
-      alert("Could not update course: " + courseRes.error.message)
+      toast.error("Could not update course: " + courseRes.error.message)
       return false
     }
 
@@ -324,7 +329,7 @@ function App() {
     setLoading(false)
 
     if (roundsRes.error) {
-      alert("Course saved, but saved round names could not be updated: " + roundsRes.error.message)
+      toast.error("Course saved, but saved round names could not be updated: " + roundsRes.error.message)
     }
 
     if (selectedCourseId === courseToRename.id) {
@@ -337,7 +342,7 @@ function App() {
 
   async function deleteCourse(courseToDelete) {
     if (!courseToDelete?.id) {
-      alert("Could not identify the selected course")
+      toast.error("Could not identify the selected course")
       return false
     }
 
@@ -356,14 +361,14 @@ function App() {
     const roundsDelete = await deleteRoundsByCourseId(courseToDelete.id)
     if (roundsDelete.error) {
       setLoading(false)
-      alert("Could not delete played rounds for this course: " + roundsDelete.error.message)
+      toast.error("Could not delete played rounds for this course: " + roundsDelete.error.message)
       return false
     }
 
     const detachRes = await clearRoundCourseByCourseId(courseToDelete.id)
     if (detachRes.error) {
       setLoading(false)
-      alert("Could not clear old round links for this course: " + detachRes.error.message)
+      toast.error("Could not clear old round links for this course: " + detachRes.error.message)
       return false
     }
 
@@ -371,7 +376,7 @@ function App() {
     setLoading(false)
 
     if (deleteRes.error) {
-      alert("Could not delete course: " + deleteRes.error.message)
+      toast.error("Could not delete course: " + deleteRes.error.message)
       return false
     }
 
@@ -399,13 +404,13 @@ function App() {
   }
   async function handleCreateCourse(courseName) {
     if (!session?.user) {
-      alert("Please log in first")
+      toast.error("Please log in first")
       return
     }
 
     const cleaned = String(courseName || "").trim()
     if (!cleaned) {
-      alert("Please enter a course name")
+      toast.error("Please enter a course name")
       return
     }
 
@@ -428,7 +433,7 @@ function App() {
     })
 
     if (error) {
-      alert("Could not create course: " + error.message)
+      toast.error("Could not create course: " + error.message)
       return
     }
 
@@ -445,18 +450,18 @@ function App() {
   async function handleStartRound() {
     if (isNewCourse) {
       if (!course.trim()) {
-        alert("Please enter a course name")
+        toast.error("Please enter a course name")
         return
       }
     } else {
       if (!selectedCourseData) {
-        alert("Please select a saved course")
+        toast.error("Please select a saved course")
         return
       }
     }
 
     if (!session?.user) {
-      alert("Please log in first")
+      toast.error("Please log in first")
       return
     }
 
@@ -473,7 +478,7 @@ function App() {
     setLoading(false)
 
     if (error) {
-      alert("Error starting round: " + error.message)
+      toast.error("Error starting round: " + error.message)
       return
     }
 
@@ -602,7 +607,7 @@ function App() {
       const existingCourseRes = await findCourseByName(session.user.id, normalizedName)
 
       if (existingCourseRes.error) {
-        alert("Round saved, but course lookup failed: " + existingCourseRes.error.message)
+        toast.error("Round saved, but course lookup failed: " + existingCourseRes.error.message)
       } else {
         const existingCourse = existingCourseRes.data?.[0]
 
@@ -624,7 +629,7 @@ function App() {
           })
 
           if (updateRes.error) {
-            alert(
+            toast.error(
               "Round saved, but existing course could not be updated: " + updateRes.error.message
             )
           } else if (roundId) {
@@ -639,7 +644,7 @@ function App() {
           })
 
           if (courseError) {
-            alert("Round saved, but course could not be created: " + courseError.message)
+            toast.error("Round saved, but course could not be created: " + courseError.message)
           } else if (courseData?.[0]?.id && roundId) {
             await updateRoundCourse(roundId, courseData[0].id)
           }
@@ -650,11 +655,11 @@ function App() {
     const bundle = await fetchRoundBundle(roundId)
 
     if (bundle.holesRes.error) {
-      alert("Could not load holes: " + bundle.holesRes.error.message)
+      toast.error("Could not load holes: " + bundle.holesRes.error.message)
       return
     }
     if (bundle.shotsRes.error) {
-      alert("Could not load shots: " + bundle.shotsRes.error.message)
+      toast.error("Could not load shots: " + bundle.shotsRes.error.message)
       return
     }
 
@@ -665,12 +670,12 @@ function App() {
 
   async function saveShotByShotHole() {
     if (!roundId) {
-      alert("Please start a round first")
+      toast.error("Please start a round first")
       return false
     }
 
     if (par === "") {
-      alert("Please choose par")
+      toast.error("Please choose par")
       return false
     }
 
@@ -678,7 +683,7 @@ function App() {
     const validShots = getValidShots(shots)
 
     if (validShots.length === 0) {
-      alert("Please log at least one shot with distance to hole")
+      toast.error("Please log at least one shot with distance to hole")
       return false
     }
 
@@ -701,14 +706,14 @@ function App() {
     const deleteExistingShots = await deleteShotsByRoundAndHole(roundId, hole)
     if (deleteExistingShots.error) {
       setLoading(false)
-      alert("Error replacing saved shots: " + deleteExistingShots.error.message)
+      toast.error("Error replacing saved shots: " + deleteExistingShots.error.message)
       return false
     }
 
     const deleteExistingHole = await deleteHoleByRoundAndNumber(roundId, hole)
     if (deleteExistingHole.error) {
       setLoading(false)
-      alert("Error replacing saved hole: " + deleteExistingHole.error.message)
+      toast.error("Error replacing saved hole: " + deleteExistingHole.error.message)
       return false
     }
 
@@ -728,7 +733,7 @@ function App() {
 
     if (error) {
       setLoading(false)
-      alert("Error saving hole: " + error.message)
+      toast.error("Error saving hole: " + error.message)
       return false
     }
 
@@ -756,7 +761,7 @@ function App() {
     setLoading(false)
 
     if (shotInsert.error) {
-      alert("Hole was saved, but shots failed to save: " + shotInsert.error.message)
+      toast.error("Hole was saved, but shots failed to save: " + shotInsert.error.message)
       return false
     }
 
@@ -789,11 +794,11 @@ function App() {
     setLoading(false)
 
     if (bundle.holesRes.error) {
-      alert("Could not load saved hole: " + bundle.holesRes.error.message)
+      toast.error("Could not load saved hole: " + bundle.holesRes.error.message)
       return
     }
     if (bundle.shotsRes.error) {
-      alert("Could not load saved shots: " + bundle.shotsRes.error.message)
+      toast.error("Could not load saved shots: " + bundle.shotsRes.error.message)
       return
     }
 
@@ -865,7 +870,7 @@ function App() {
     setLoading(false)
 
     if (result.error) {
-      alert("Could not delete round: " + result.error.message)
+      toast.error("Could not delete round: " + result.error.message)
       return
     }
 
@@ -886,11 +891,11 @@ function App() {
     const bundle = await fetchRoundBundle(roundIdValue)
 
     if (bundle.holesRes.error) {
-      alert("Could not refresh holes: " + bundle.holesRes.error.message)
+      toast.error("Could not refresh holes: " + bundle.holesRes.error.message)
       return false
     }
     if (bundle.shotsRes.error) {
-      alert("Could not refresh shots: " + bundle.shotsRes.error.message)
+      toast.error("Could not refresh shots: " + bundle.shotsRes.error.message)
       return false
     }
 
@@ -902,19 +907,19 @@ function App() {
 
   async function saveReviewHoleEdits(holeToSave, parValue, editedShots) {
     if (!selectedReviewRound?.id || !selectedReviewRound?.user_id) {
-      alert("Could not identify the selected round")
+      toast.error("Could not identify the selected round")
       return false
     }
 
     const selectedPar = parseInt(parValue, 10)
     if (!Number.isFinite(selectedPar)) {
-      alert("Please choose par")
+      toast.error("Please choose par")
       return false
     }
 
     const validShots = getValidShots(editedShots)
     if (validShots.length === 0) {
-      alert("Please log at least one shot with distance to hole")
+      toast.error("Please log at least one shot with distance to hole")
       return false
     }
 
@@ -928,14 +933,14 @@ function App() {
     const deleteExistingShots = await deleteShotsByRoundAndHole(selectedReviewRound.id, holeNumber)
     if (deleteExistingShots.error) {
       setLoading(false)
-      alert("Error replacing saved shots: " + deleteExistingShots.error.message)
+      toast.error("Error replacing saved shots: " + deleteExistingShots.error.message)
       return false
     }
 
     const deleteExistingHole = await deleteHoleByRoundAndNumber(selectedReviewRound.id, holeNumber)
     if (deleteExistingHole.error) {
       setLoading(false)
-      alert("Error replacing saved hole: " + deleteExistingHole.error.message)
+      toast.error("Error replacing saved hole: " + deleteExistingHole.error.message)
       return false
     }
 
@@ -955,7 +960,7 @@ function App() {
 
     if (error) {
       setLoading(false)
-      alert("Error saving edits: " + error.message)
+      toast.error("Error saving edits: " + error.message)
       return false
     }
 
@@ -981,7 +986,7 @@ function App() {
     setLoading(false)
 
     if (shotInsert.error) {
-      alert("Hole was saved, but shots failed to save: " + shotInsert.error.message)
+      toast.error("Hole was saved, but shots failed to save: " + shotInsert.error.message)
       return false
     }
 
@@ -1001,7 +1006,7 @@ function App() {
     )
     if (shotsDelete.error) {
       setLoading(false)
-      alert("Could not delete shots: " + shotsDelete.error.message)
+      toast.error("Could not delete shots: " + shotsDelete.error.message)
       return false
     }
 
@@ -1012,14 +1017,16 @@ function App() {
     setLoading(false)
 
     if (holeDelete.error) {
-      alert("Could not delete hole: " + holeDelete.error.message)
+      toast.error("Could not delete hole: " + holeDelete.error.message)
       return false
     }
 
     return refreshSelectedReviewRound(selectedReviewRound.id)
   }
 
-  function updateRoundTags(roundIdValue, tags) {
+  async function updateRoundTags(roundIdValue, tags) {
+    // Keep localStorage as a graceful fallback so tags keep working even before
+    // the rounds.tags migration is applied (or when Supabase is unavailable).
     setStoredRoundTags(roundIdValue, tags)
     if (roundIdValue === roundId) {
       setSummaryRoundTags(tags)
@@ -1034,6 +1041,22 @@ function App() {
     setSelectedReviewRound((prev) =>
       prev?.id === roundIdValue ? { ...prev, tags } : prev
     )
+
+    if (!supabase) return
+
+    try {
+      const { error } = await persistRoundTags(roundIdValue, tags)
+      if (error) {
+        // The tags column may not exist yet; localStorage already holds them,
+        // so degrade silently rather than surfacing a fatal error.
+        console.warn("Could not sync round tags to Supabase:", error.message)
+      }
+    } catch (error) {
+      console.warn(
+        "Could not sync round tags to Supabase:",
+        error?.message || error
+      )
+    }
   }
 
   function goHomeAndReset() {

@@ -1,7 +1,9 @@
 import { useState } from "react"
 import { supabase } from "../supabase"
+import { useToast } from "./ToastProvider"
 
 export default function AuthScreen({ onLogin }) {
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [playerName, setPlayerName] = useState("");
@@ -15,7 +17,7 @@ export default function AuthScreen({ onLogin }) {
       });
 
       if (error) {
-        alert(error.message);
+        toast.error(error.message);
         return;
       }
 
@@ -28,7 +30,7 @@ export default function AuthScreen({ onLogin }) {
         });
       }
 
-      alert("Account created. You can now log in.");
+      toast.success("Account created. You can now log in.");
       setIsSignup(false);
     } else {
       const { error } = await supabase.auth.signInWithPassword({
@@ -37,7 +39,7 @@ export default function AuthScreen({ onLogin }) {
       });
 
       if (error) {
-        alert(error.message);
+        toast.error(error.message);
         return;
       }
 

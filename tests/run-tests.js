@@ -8,9 +8,11 @@ import {
 } from "../src/utils/analytics.js"
 import {
   evaluateHoleStrokesGained,
+  getNearestExpected,
   getShotSgCategory,
   summarizeHoleStrokesGained,
 } from "../src/utils/strokesGained.js"
+import { SG_TABLE } from "../src/utils/strokesGainedTable.js"
 
 function runTest(name, fn) {
   try {
@@ -22,6 +24,52 @@ function runTest(name, fn) {
     process.exitCode = 1
   }
 }
+
+function bruteForceNearest(table, distance) {
+  if (!Number.isFinite(distance)) return null
+  if (!table || table.length === 0) return null
+
+  let nearest = table[0]
+  let minDiff = Math.abs(distance - table[0].distance)
+
+  for (const row of table) {
+    const diff = Math.abs(distance - row.distance)
+    if (diff < minDiff) {
+      minDiff = diff
+      nearest = row
+    }
+  }
+
+  return nearest.expectedShots
+}
+
+runTest("getNearestExpected binary search matches brute-force nearest scan", () => {
+  for (const [category, table] of Object.entries(SG_TABLE)) {
+    const probes = new Set([-50, 0, 0.25, 700])
+
+    table.forEach((row, index) => {
+      probes.add(row.distance)
+      probes.add(row.distance + 0.001)
+      probes.add(row.distance - 0.001)
+      const next = table[index + 1]
+      if (next) {
+        // Exactly halfway between two rows exercises the tie-break path.
+        probes.add((row.distance + next.distance) / 2)
+      }
+    })
+
+    for (const distance of probes) {
+      assert.equal(
+        getNearestExpected(table, distance),
+        bruteForceNearest(table, distance),
+        `mismatch for category "${category}" at distance ${distance}`
+      )
+    }
+  }
+
+  assert.equal(getNearestExpected([], 10), null)
+  assert.equal(getNearestExpected(SG_TABLE.green, Number.NaN), null)
+})
 
 runTest("categorizes shots by lie and distance bands", () => {
   assert.equal(
@@ -55,6 +103,16 @@ runTest("categorizes shots by lie and distance bands", () => {
     }),
     "Putting"
   )
+})
+
+runTest("normalizes green lie aliases to Putting", () => {
+  for (const lie of ["Green", "On green", "Putting"]) {
+    assert.equal(
+      getShotSgCategory({ shot: { lie, distance_to_flag: 5 }, shotIndex: 2 }),
+      "Putting",
+      `expected "${lie}" to categorize as Putting`
+    )
+  }
 })
 
 runTest("evaluates strokes gained across a complete hole", () => {
